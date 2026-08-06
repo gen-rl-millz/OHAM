@@ -8,6 +8,7 @@ on:
     tags: ["v*"]
 permissions:
   contents: write
+  packages: write
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -28,3 +29,21 @@ jobs:
             RELEASE_SHA256SUMS \
             --title "OHAM $GITHUB_REF_NAME" \
             --notes "OHAM — OrthoHolonic Accessible Memory. The usable reader: oham CLI (info · unseal · serve · repack · excerpt · windowed reads), the wasm receiver + pages, the one-tag <oham-stream> element. Every conversion reversible and gated; dogfood with ./dogfood.sh (every step prints the hash it must produce). Sealing is offered through the OHAM API — involvedinvolutions.com. Paul Phillips — solo developer · Apache-2.0 + Commons Clause."
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: dist/docker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/gen-rl-millz/oham:${{ github.ref_name }}
+            ghcr.io/gen-rl-millz/oham:latest

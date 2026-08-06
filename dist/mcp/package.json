@@ -1,0 +1,13 @@
+{
+  "name": "oham-mcp",
+  "version": "0.2.0",
+  "description": "OHAM as a native tool for any MCP agent (Claude, Cursor, ...): inspect, decode frames/windows to images, excerpt stills, convert wire forms, and serve — over the sealed .tsb format. Zero dependencies.",
+  "type": "module",
+  "bin": { "oham-mcp": "server.mjs" },
+  "files": ["server.mjs", "README.md", "bin/"],
+  "keywords": ["mcp", "modelcontextprotocol", "oham", "tsb", "video", "agent-tools"],
+  "author": "Paul Phillips (https://involvedinvolutions.com)",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": { "type": "git", "url": "git+https://github.com/gen-rl-millz/oham.git", "directory": "dist/mcp" },
+  "homepage": "https://github.com/gen-rl-millz/oham/tree/main/dist/mcp"
+}

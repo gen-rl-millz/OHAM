@@ -1,0 +1,6 @@
+name = "oham-edge"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+[[r2_buckets]]
+binding = "CLIPS"
+bucket_name = "oham-clips"
