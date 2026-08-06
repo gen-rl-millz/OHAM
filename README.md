@@ -1,2 +1,89 @@
-# OHAM
-Ortho-Holonic Accessible Memory - A Paul Phillips/Invovled-Involutions Manifestation.
+# OHAM — OrthoHolonic Accessible Memory
+
+*A Paul Phillips / Involved Involutions manifestation.*
+
+**A sealed-media substrate that stores addresses, not pixels.** Content
+lives in a `.tsb` sealed container and is reconstructed bit-exactly on
+any device by a small CPU-only receiver — no GPU, no codecs, integer
+arithmetic end to end. Any frame is readable at any moment at the same
+cost (no keyframes), any output size is an exact masked read of the same
+sealed content (no transcodes), and streams survive arbitrary delivery
+reordering.
+
+**Sole developer: [Paul Phillips](https://involvedinvolutions.com).**
+
+Live demo (frozen, verified at 60 fps on-device):
+<https://storage.googleapis.com/framecore-etch-video/edge.html>
+
+## What this repository is
+
+The **usable tool**: the reader/player half of OHAM, complete and
+verified — the `oham` CLI, the browser receiver (WebAssembly + pages),
+and a one-tag web component. Everything here reads, serves, converts,
+and plays sealed containers locally, with no service dependency.
+
+**Sealing (encoding) is offered as a service** through the OHAM API —
+contact via [involvedinvolutions.com](https://involvedinvolutions.com).
+The sealed format stays fully readable locally: nothing you decode ever
+depends on the service.
+
+## The CLI
+
+```sh
+bin/linux-x86_64/oham --help
+
+# inspect a sealed container (structure, census, digests; --json for agents)
+oham info clip.tsb
+
+# exact RGBA/PNG of any frame at any moment — reads only that frame's bytes
+oham unseal clip.tsb --tick 300 --level 1 --png frame.png
+
+# serve clips to the web receiver (HTTP ranges, CORS)
+oham serve ./clips --port 8207
+
+# convert wire forms losslessly (verified before the output file exists)
+oham repack clip.tsb clipz.tsb --v2
+
+oham about
+```
+
+Every conversion is **reversible and verified**: the compressed z-wire
+form converts back to the original container byte-identically, and the
+CLI produces the same pixel bytes as the browser receiver for the same
+input — these are gated claims, checked on every release, not promises.
+
+## Add the stream to any page — one tag
+
+```html
+<script src="web/oham-element.js"></script>
+<oham-stream></oham-stream>                          <!-- the flagship demo -->
+<oham-stream clip="https://your.host/your.tsb"></oham-stream>
+<oham-stream mode="locked"></oham-stream>            <!-- fill once, locked 60 -->
+<oham-stream mode="probe"></oham-stream>             <!-- measure your wire -->
+```
+
+The element embeds the proven receiver page — it cannot drift from the
+demo because it *is* the demo.
+
+## The web receiver
+
+`web/` is a byte-exact copy of the frozen, verified deployment (each
+file's hash is pinned in `EXPORT_MANIFEST.txt`): the streaming player
+(`edge.html`), banked locked-60 playback (`edge-next.html`), the wire
+probe (`wire-probe.html`), the decode worker, and `oham.wasm` — the
+CPU-only receiver that runs identically in every browser.
+
+Host it anywhere that serves static files with HTTP Range support;
+`oham serve` is such a host.
+
+## License
+
+**Apache-2.0 + Commons Clause** (see `LICENSE`) — free and open to play
+with, study, and verify. Selling a product or service whose value
+derives substantially from OHAM requires a **commercial license**: see
+`COMMERCIAL_LICENSE.md`. Attribution lives in `NOTICE`.
+
+---
+
+**Paul Phillips — solo developer.**
+OHAM / OrthoHolonic Accessible Memory · [involvedinvolutions.com](https://involvedinvolutions.com)
