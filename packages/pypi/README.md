@@ -47,14 +47,6 @@ oham repack clip.tsb clipz.tsb --v2
 oham about
 ```
 
-Sealing through the OHAM API (the write side lives behind the private
-backend and is called, never shipped — the response is verified against
-its transport hash and the container law before it is kept):
-
-```sh
-oham seal -o out.tsb --api https://<oham-api> [--y4m src.y4m] -- --w 1920 --h 1088 --frames 60
-```
-
 Every conversion is **reversible and verified**: the compressed z-wire
 form converts back to the original container byte-identically, and the
 CLI produces the same pixel bytes as the browser receiver for the same

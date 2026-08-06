@@ -1,3 +1,15 @@
+Metadata-Version: 2.4
+Name: oham
+Version: 0.2.0
+Summary: OHAM — OrthoHolonic Accessible Memory. Exact reader for .tsb sealed containers: inspect, unseal (frames/windows), serve, repack, excerpt.
+Author: Paul Phillips
+License: Apache-2.0 WITH Commons-Clause
+Project-URL: Homepage, https://github.com/gen-rl-millz/oham
+Project-URL: Developer, https://involvedinvolutions.com
+Keywords: video,streaming,still-image,deep-zoom,oham,tsb
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+
 # OHAM — OrthoHolonic Accessible Memory
 
 *A Paul Phillips / Involved Involutions manifestation.*
@@ -45,14 +57,6 @@ oham serve ./clips --port 8207
 oham repack clip.tsb clipz.tsb --v2
 
 oham about
-```
-
-Sealing through the OHAM API (the write side lives behind the private
-backend and is called, never shipped — the response is verified against
-its transport hash and the container law before it is kept):
-
-```sh
-oham seal -o out.tsb --api https://<oham-api> [--y4m src.y4m] -- --w 1920 --h 1088 --frames 60
 ```
 
 Every conversion is **reversible and verified**: the compressed z-wire

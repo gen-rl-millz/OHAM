@@ -21,3 +21,10 @@ Developer = "https://involvedinvolutions.com"
 
 [project.scripts]
 oham = "oham:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = ["oham"]
+
+[tool.setuptools.package-data]
+oham = ["bin/oham"]
