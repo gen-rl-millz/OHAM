@@ -1,0 +1,23 @@
+# The PyPI face of OHAM — `pip install oham` ships the prebuilt CLI and a
+# thin Python wrapper (subprocess; the CLI's --json flags are the API).
+# Build/publish once a PyPI token exists: see BUILD.md alongside this file.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oham"
+version = "0.2.0"
+description = "OHAM — OrthoHolonic Accessible Memory. Exact reader for .tsb sealed containers: inspect, unseal (frames/windows), serve, repack, excerpt."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0 WITH Commons-Clause" }
+authors = [{ name = "Paul Phillips" }]
+keywords = ["video", "streaming", "still-image", "deep-zoom", "oham", "tsb"]
+
+[project.urls]
+Homepage = "https://github.com/gen-rl-millz/oham"
+Developer = "https://involvedinvolutions.com"
+
+[project.scripts]
+oham = "oham:main"

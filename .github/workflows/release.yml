@@ -1,0 +1,30 @@
+# Cut a GitHub Release whenever a version tag is pushed. The release carries
+# the prebuilt CLI (tar.gz + checksums) and the web receiver bundle, so
+# `curl | tar` is a complete install. Runs under the Action's own token —
+# no external secrets needed.
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: package assets
+        run: |
+          tar -C bin/linux-x86_64 -czf oham-${GITHUB_REF_NAME}-linux-x86_64.tar.gz oham SHA256SUMS
+          (cd web && zip -qr ../oham-${GITHUB_REF_NAME}-web.zip .)
+          sha256sum oham-${GITHUB_REF_NAME}-linux-x86_64.tar.gz oham-${GITHUB_REF_NAME}-web.zip > RELEASE_SHA256SUMS
+      - name: create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            oham-${GITHUB_REF_NAME}-linux-x86_64.tar.gz \
+            oham-${GITHUB_REF_NAME}-web.zip \
+            RELEASE_SHA256SUMS \
+            --title "OHAM $GITHUB_REF_NAME" \
+            --notes "OHAM — OrthoHolonic Accessible Memory. The usable reader: oham CLI (info · unseal · serve · repack · excerpt · windowed reads), the wasm receiver + pages, the one-tag <oham-stream> element. Every conversion reversible and gated; dogfood with ./dogfood.sh (every step prints the hash it must produce). Sealing is offered through the OHAM API — involvedinvolutions.com. Paul Phillips — solo developer · Apache-2.0 + Commons Clause."

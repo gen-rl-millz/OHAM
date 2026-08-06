@@ -2,7 +2,10 @@
 
 Everything below is objective: expected hashes are printed next to every
 step, so "it works" is a byte comparison, never an impression. The whole
-run needs: this repository, `curl`, and ~250 MB of disk. No build step —
+run needs: this repository, `curl`, and disk for the two published
+clips it downloads in step 1 (**~211 MB**, kept in the workdir so reruns
+are free — `./dogfood.sh <workdir>` reuses one; without an argument it
+leaves its temp workdir behind, printed on the last line). No build step —
 the CLI is prebuilt at `bin/linux-x86_64/oham` (checksum in `SHA256SUMS`).
 
 **The fast path:** `./dogfood.sh` runs every step below mechanically and

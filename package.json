@@ -1,0 +1,33 @@
+{
+  "name": "oham-stream",
+  "version": "0.2.0",
+  "description": "OHAM \u2014 OrthoHolonic Accessible Memory. Sealed-media receiver: exact CPU-only decode of .tsb containers in the browser, plus the one-tag <oham-stream> element. Addresses, not pixels.",
+  "main": "web/oham-element.js",
+  "files": [
+    "web/",
+    "LICENSE",
+    "LICENSE.apache2",
+    "LICENSE.commons-clause",
+    "COMMERCIAL_LICENSE.md",
+    "NOTICE",
+    "DOGFOOD.md"
+  ],
+  "keywords": [
+    "video",
+    "streaming",
+    "wasm",
+    "codec-free",
+    "hadamard",
+    "oham",
+    "tsb",
+    "still-image",
+    "deep-zoom"
+  ],
+  "author": "Paul Phillips (https://involvedinvolutions.com)",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gen-rl-millz/oham.git"
+  },
+  "homepage": "https://github.com/gen-rl-millz/oham#readme"
+}
