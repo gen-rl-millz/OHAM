@@ -52,6 +52,30 @@ form converts back to the original container byte-identically, and the
 CLI produces the same pixel bytes as the browser receiver for the same
 input — these are gated claims, checked on every release, not promises.
 
+## Stills and ultra-high-MP images
+
+A one-frame excerpt is a **still** — fully standalone, records carried
+verbatim, no re-encode:
+
+```sh
+oham excerpt clip.tsb still.tsb --tick 300     # 8.8 MP native, ~117 KB
+oham unseal still.tsb --tick 0 --png photo.png
+# read ONLY a window — the cost is the window's, not the image's:
+oham unseal still.tsb --tick 0 --window 1024,512,1536,1024 --png crop.png
+```
+
+`web/still.html` is the pan/zoom viewer built on the same law: every
+view is an exact windowed read at the right resolution rung — **you
+never download the image**. The demo still ships at `web/still300.tsb`;
+try `oham serve . --port 8207` then open
+`http://127.0.0.1:8207/web/still.html?src=/web/still300.tsb`.
+
+## Try it yourself, objectively
+
+`DOGFOOD.md` is a cold-start exercise where every step prints the hash
+it must produce — run `./dogfood.sh` and the verdict is a byte
+comparison, not an impression.
+
 ## Add the stream to any page — one tag
 
 ```html

@@ -1,0 +1,143 @@
+<!doctype html>
+<!-- OHAM still viewer — F-IMG. One sealed still; pan/zoom = windowed reads.
+     You never download the image: every view is an exact region read of the
+     inscription at the right rung, and the cost is the window's, not the
+     frame's. LAB TIER page. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>OHAM still — windowed reads</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #v { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none;
+       cursor: grab; image-rendering: pixelated; }
+  #bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 6px 10px;
+         font: 12px ui-monospace, monospace; color: #9fb0c0;
+         background: rgba(10,13,16,.82); white-space: nowrap; overflow-x: auto; }
+  #bar b { color: #d7e1ea; font-weight: 600; }
+  #zoom { position: fixed; right: 10px; bottom: 40px; display: flex;
+          flex-direction: column; gap: 8px; }
+  #zoom button { width: 40px; height: 40px; font-size: 20px; border: 0;
+                 border-radius: 8px; background: rgba(30,38,46,.9);
+                 color: #cfe0ee; }
+</style>
+</head>
+<body>
+<canvas id="v"></canvas>
+<div id="zoom"><button id="zi">+</button><button id="zo">−</button></div>
+<div id="bar">loading…</div>
+<script type="module">
+const Q = new URLSearchParams(location.search);
+const SRC = Q.get("src") || "still300.tsb";
+const TICK = +Q.get("tick") || 0;
+const bar = document.getElementById("bar");
+const cv = document.getElementById("v");
+const cx2d = cv.getContext("2d");
+
+const fail = m => { bar.textContent = "REFUSED: " + m; throw new Error(m); };
+
+// ---- load the receiver (same wasm the video pages run)
+const { instance } = await WebAssembly.instantiateStreaming(
+  fetch("oham.wasm"), {}).catch(() => fail("oham.wasm failed to load"));
+const E = instance.exports;
+const mem = () => new Uint8Array(E.memory.buffer);
+
+// ---- open the container: prelude, evh, ONE evi entry, ONE record — that is
+// the entire wire cost of an arbitrarily large still before the first view
+const get = async (a, b) => {
+  const r = await fetch(SRC, { headers: { Range: `bytes=${a}-${b}` } });
+  if (!(r.status === 206 || r.status === 200)) fail(`range fetch ${r.status}`);
+  const buf = new Uint8Array(await r.arrayBuffer());
+  return r.status === 206 ? buf : buf.subarray(a, b + 1);
+};
+const pre = await get(0, 87);
+const dv = new DataView(pre.buffer, pre.byteOffset, 88);
+if (String.fromCharCode(...pre.subarray(0, 4)) !== "TSB1") fail("not a .tsb");
+const ver = dv.getUint32(4, true);
+const sec = i => ({ off: Number(dv.getBigUint64(24 + 16 * i, true)),
+                    len: Number(dv.getBigUint64(32 + 16 * i, true)) });
+const [sevh, sevi, , sevs] = [0, 1, 2, 3].map(sec);
+const evh = await get(sevh.off, sevh.off + sevh.len - 1);
+const ie = await get(sevi.off + TICK * 12, sevi.off + TICK * 12 + 11);
+const idv = new DataView(ie.buffer, ie.byteOffset, 12);
+const roff = Number(idv.getBigUint64(0, true)), rlen = idv.getUint32(8, true);
+let rec = await get(sevs.off + roff, sevs.off + roff + rlen - 1);
+if (ver === 2) {
+  const ds = new DecompressionStream("deflate-raw");
+  rec = new Uint8Array(await new Response(
+    new Blob([rec]).stream().pipeThrough(ds)).arrayBuffer());
+}
+const hp = E.evs_reserve(evh.length); mem().set(evh, hp);
+if (!E.evs_open(hp, evh.length)) fail("receiver rejected the header");
+const rp = E.evs_reserve_frame(rec.length); mem().set(rec, rp);
+if (!E.evs_push_frame(TICK, rp, rec.length)) fail("receiver rejected the record");
+
+const W = E.evs_w(), H = E.evs_h(), BLOCK = E.evs_block(), LEVELS = E.evs_levels();
+const recBytes = rlen;
+
+// ---- view state: center (native px) + integer rung; render = one window read
+let level = Math.min(LEVELS - 1, +Q.get("level") || (LEVELS - 1));
+let cx = W / 2, cy = H / 2;
+let lastAddrs = 0, lastWin = "";
+
+function render() {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+  const lw = W >> level, lh = H >> level;          // image size at this rung
+  const bs = Math.max(1, BLOCK >> level);
+  // desired pixel window at this rung, centered on (cx,cy)
+  const vw = Math.min(cv.width, lw), vh = Math.min(cv.height, lh);
+  let x0 = Math.round((cx / W) * lw - vw / 2), y0 = Math.round((cy / H) * lh - vh / 2);
+  x0 = Math.max(0, Math.min(lw - vw, x0)); y0 = Math.max(0, Math.min(lh - vh, y0));
+  const x1 = Math.min(lw, x0 + vw), y1 = Math.min(lh, y0 + vh);
+  lastAddrs = E.evs_frame_region(TICK, level, x0, y0, x1, y1);
+  const bx0 = Math.floor(x0 / bs), by0 = Math.floor(y0 / bs);
+  const bx1 = Math.ceil(x1 / bs), by1 = Math.ceil(y1 / bs);
+  const p = E.evs_ref_window_rgba(bx0, by0, bx1, by1);
+  const ww = E.evs_win_w(), wh = E.evs_win_h();
+  const img = new ImageData(
+    new Uint8ClampedArray(E.memory.buffer, p, ww * wh * 4).slice(), ww, wh);
+  cx2d.imageSmoothingEnabled = false;
+  cx2d.fillStyle = "#000"; cx2d.fillRect(0, 0, cv.width, cv.height);
+  // place the block-aligned window so the requested x0,y0 sits at the origin
+  createImageBitmap(img).then(bm => {
+    cx2d.drawImage(bm, bx0 * bs - x0, by0 * bs - y0);
+    lastWin = `${x1 - x0}x${y1 - y0}`;
+    bar.innerHTML =
+      `<b>OHAM still</b> · ${W}x${H} native sealed in ${recBytes.toLocaleString()} B` +
+      ` · rung L${level} (${lw}x${lh})` +
+      ` · window ${lastWin} · <b id="addr">${lastAddrs}</b> addresses this view` +
+      ` · you never downloaded the image` +
+      ` · <b>Paul Phillips</b> · OrthoHolonic Accessible Memory`;
+  });
+}
+
+// ---- input: drag pans (native-coord), wheel/buttons change the rung
+let drag = null;
+cv.addEventListener("pointerdown", e => {
+  drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener("pointermove", e => {
+  if (!drag) return;
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const s = (W >> level) / W;                      // rung px per native px
+  cx -= (e.clientX - drag.x) * dpr / s; cy -= (e.clientY - drag.y) * dpr / s;
+  cx = Math.max(0, Math.min(W, cx)); cy = Math.max(0, Math.min(H, cy));
+  drag = { x: e.clientX, y: e.clientY }; render(); });
+cv.addEventListener("pointerup", () => { drag = null; });
+const setLevel = l => { level = Math.max(0, Math.min(LEVELS - 1, l)); render(); };
+cv.addEventListener("wheel", e => {
+  e.preventDefault(); setLevel(level + (e.deltaY > 0 ? 1 : -1)); }, { passive: false });
+document.getElementById("zi").onclick = () => setLevel(level - 1);
+document.getElementById("zo").onclick = () => setLevel(level + 1);
+addEventListener("resize", render);
+render();
+window.__still = { get addrs() { return lastAddrs; }, get level() { return level; },
+                   W, H };
+// measurement hooks: set a rung programmatically, and the FULL frame's
+// address cost at the current rung — what the W3 gate compares a view against
+window.__still_set = l => { setLevel(l); };
+window.__still_full = (w, h) => E.evs_frame_region(TICK, level, 0, 0, w, h);
+</script>
+</body>
+</html>
