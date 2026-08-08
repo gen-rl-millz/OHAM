@@ -1,0 +1,84 @@
+#!/usr/bin/env node
+/* oham — the launcher npm links onto your PATH.
+ *
+ * The real `oham` is a native binary. It cannot live in this package,
+ * because then every platform would download every platform's binary. So
+ * this package declares one optional dependency per platform, each gated by
+ * `os`/`cpu` so npm installs exactly the one that matches — the pattern
+ * esbuild and sharp use — and this shim finds it and runs it.
+ *
+ * Resolution order:
+ *   1. $OHAM_BIN            an explicit override always wins
+ *   2. oham-cli-<platform>  the optional dependency npm installed for you
+ *   3. ./bin/oham           a binary vendored beside this file (a tarball
+ *                           built for one platform, or a local build)
+ *
+ * When none resolves the failure NAMES THE PLATFORM and what to do, because
+ * `spawn oham ENOENT` names nothing anybody can act on. That exact message
+ * is what two external reviewers hit before giving up.
+ *
+ * Paul Phillips — solo developer · OHAM / OrthoHolonic Accessible Memory
+ * involvedinvolutions.com · Apache-2.0 + Commons Clause
+ */
+"use strict";
+const { spawnSync } = require("node:child_process");
+const { existsSync, statSync } = require("node:fs");
+const { join } = require("node:path");
+
+// npm's own platform vocabulary, so the package name and the `os`/`cpu`
+// fields that gate it are written from one source.
+const PLATFORM = `${process.platform}-${process.arch}`;
+const PKG = `oham-cli-${PLATFORM}`;
+
+// Every platform that has a published binary today. Ship one; name the rest
+// as "not built yet" rather than letting them fail as "not found", which
+// reads like a bug in the user's install.
+const BUILT = ["linux-x64"];
+
+function resolveBinary() {
+  const override = process.env.OHAM_BIN;
+  if (override) {
+    if (existsSync(override)) return { path: override, from: "$OHAM_BIN" };
+    return { error: `$OHAM_BIN is set to ${override}, which does not exist.` };
+  }
+  try {
+    // require.resolve finds the dependency wherever npm actually put it —
+    // nested, hoisted, or pnpm-linked. Guessing ../oham-cli-* breaks on all
+    // three layouts.
+    const p = require.resolve(`${PKG}/bin/oham`);
+    if (existsSync(p)) return { path: p, from: PKG };
+  } catch {
+    /* fall through to the vendored copy */
+  }
+  const vendored = join(__dirname, "oham");
+  // __dirname holds this shim, also named `oham`; only take it if it is a
+  // real binary, never this script.
+  if (existsSync(vendored) && statSync(vendored).size > 100_000) {
+    return { path: vendored, from: "vendored" };
+  }
+  return {
+    error: BUILT.includes(PLATFORM)
+      ? `the ${PKG} package is not installed. Reinstall with\n` +
+        `    npm i -g oham-cli\n` +
+        `  (if you used --no-optional, that flag skipped it), or point\n` +
+        `  OHAM_BIN at an oham binary you already have.`
+      : `there is no OHAM binary for ${PLATFORM} yet.\n` +
+        `  Built today: ${BUILT.join(", ")}.\n` +
+        `  Build from source or ask at involvedinvolutions.com; if you have a\n` +
+        `  binary already, set OHAM_BIN=/path/to/oham.`,
+  };
+}
+
+const found = resolveBinary();
+if (found.error) {
+  process.stderr.write(`oham: ${found.error}\n`);
+  process.exit(127);
+}
+const r = spawnSync(found.path, process.argv.slice(2), { stdio: "inherit" });
+if (r.error) {
+  process.stderr.write(`oham: could not run ${found.path} (${found.from}): ${r.error.message}\n`);
+  process.exit(127);
+}
+// Re-raise a signal death as a signal death rather than reporting success.
+if (r.signal) process.kill(process.pid, r.signal);
+process.exit(r.status === null ? 1 : r.status);

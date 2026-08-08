@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /* oham-mcp — OHAM as a native tool for any MCP agent (Claude, Cursor, …).
  *
- * Zero dependencies: a newline-delimited JSON-RPC 2.0 stdio server speaking
- * the Model Context Protocol, wrapping the `oham` CLI. Every tool returns
- * plain text or an image; errors come back as the CLI's own REFUSED lines,
- * which always say why.
+ * A newline-delimited JSON-RPC 2.0 stdio server speaking the Model Context
+ * Protocol, wrapping the `oham` CLI. No SDK, no runtime libraries — the one
+ * dependency is `oham-cli`, which carries the binary this drives. Every tool
+ * returns plain text or an image; errors come back as the CLI's own REFUSED
+ * lines, which always say why.
  *
- * Binary resolution: $OHAM_BIN, else the repo's bin/linux-x86_64/oham
- * relative to this file, else `oham` on PATH.
+ * Binary resolution: $OHAM_BIN, else the platform package `oham-cli` brings
+ * in, else `oham` on PATH.
  *
  * Paul Phillips — solo developer · OHAM / OrthoHolonic Accessible Memory
  * involvedinvolutions.com · Apache-2.0 + Commons Clause
@@ -16,14 +17,40 @@ import { execFile } from "node:child_process";
 import { readFileSync, existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const OHAM =
-  process.env.OHAM_BIN ||
-  [join(here, "../../bin/linux-x86_64/oham"), join(here, "bin/oham")]
-    .find(existsSync) || "oham";
+const require_ = createRequire(import.meta.url);
+
+// ONE binary, in ONE package. 0.2.1 carried its own copy while `oham-cli`
+// carried another, so the proof script and the executable it proves lived in
+// different installs. `oham-cli` is now a dependency and owns the binary; its
+// per-platform packages are `os`/`cpu` gated, so one platform's bytes are
+// downloaded and not five.
+//
+// Resolved directly rather than through oham-cli's `bin/oham` launcher: that
+// launcher is a Node shim, and paying ~40 ms of process startup on a call
+// that costs ~29 µs of decode would be the tool surface's dominant cost.
+const PLATFORM = `${process.platform}-${process.arch}`;
+const candidates = [];
+try {
+  candidates.push(require_.resolve(`oham-cli-${PLATFORM}/bin/oham`));
+} catch { /* platform package absent — the message below names it */ }
+candidates.push(join(here, "bin/oham"));       // a vendored copy, if any
+
+const OHAM = process.env.OHAM_BIN || candidates.find(existsSync) || "oham";
+
+// Say so at startup, by name. A missing binary is an install problem, and an
+// ENOENT on every tool call names nothing the user can act on.
+if (OHAM === "oham" && !process.env.OHAM_BIN) {
+  process.stderr.write(
+    `oham-mcp: no oham binary found for ${PLATFORM}.\n` +
+    `  looked in: $OHAM_BIN, oham-cli-${PLATFORM}/bin/oham, ./bin/oham\n` +
+    "  fix: npm i -g oham-mcp again (--no-optional skips the binary),\n" +
+    "       or set OHAM_BIN=/path/to/oham\n");
+}
 
 const run = (args) =>
   new Promise((resolve) => {
@@ -37,9 +64,19 @@ const TOOLS = [
   {
     name: "oham_onboard",
     description:
-      "Start here. Everything OHAM does in ten copy-paste commands with the exact hashes that prove each one worked. OHAM stores video/images as exact integer addresses in sealed .tsb files — any frame readable at any moment at the same cost, every conversion reversible, decoding fully local.",
+      "Start here. Everything OHAM does in copy-paste commands, each with the exact hash that proves it worked. OHAM stores video/images as exact integer addresses in sealed .tsb files — any frame readable at any moment at the same cost, every conversion reversible, decoding fully local.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     handler: async () => text((await run(["onboard"])).out),
+  },
+  {
+    name: "oham_doctor",
+    description:
+      "Check that this OHAM install decodes correctly: reports the binary path and version, and decodes a container carried inside the binary against a digest fixed at build time. Run this FIRST if any other tool returns an unexpected hash — it separates a broken install from a real finding. Returns JSON; verdict is OHAM_DOCTOR_OK or OHAM_DOCTOR_FAIL.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    handler: async () => {
+      const r = await run(["doctor", "--json"]);
+      return r.ok ? text(r.out) : fail(r);
+    },
   },
   {
     name: "oham_info",
@@ -177,7 +214,7 @@ createInterface({ input: process.stdin }).on("line", async (line) => {
     if (method === "initialize") {
       reply(id, {
         protocolVersion: params?.protocolVersion || "2024-11-05",
-        serverInfo: { name: "oham-mcp", version: "0.2.0" },
+        serverInfo: { name: "oham-mcp", version: "0.2.2" },
         capabilities: { tools: {} },
       });
     } else if (method === "notifications/initialized" || method === "notifications/cancelled") {

@@ -30,8 +30,16 @@ depends on the service.
 ## The CLI
 
 ```sh
-bin/linux-x86_64/oham --help
+npm i -g oham-cli
+oham doctor            # is this install right? decodes a built-in fixture
+oham onboard           # the whole tool, copy-paste, each step with its hash
+```
 
+`doctor` decodes a container carried *inside* the binary and compares the
+pixels to a digest fixed at build time — a checksum proves the file
+arrived, this proves the receiver computes the right pixels here.
+
+```sh
 # inspect a sealed container (structure, census, digests; --json for agents)
 oham info clip.tsb
 
@@ -46,6 +54,12 @@ oham repack clip.tsb clipz.tsb --v2
 
 oham about
 ```
+
+*From a clone of this repository* the same binary is prebuilt at
+`bin/linux-x86_64/oham` (checksum in `SHA256SUMS`) — put it on your PATH,
+or prefix each command with that path. Full flag surface:
+[`dist/cli/COMMANDS.md`](dist/cli/COMMANDS.md), generated from the
+binary's own `--help` and gated against drift.
 
 Sealing through the OHAM API (the write side lives behind the private
 backend and is called, never shipped — the response is verified against

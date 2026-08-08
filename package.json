@@ -1,6 +1,6 @@
 {
   "name": "oham-stream",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "OHAM \u2014 OrthoHolonic Accessible Memory. Sealed-media receiver: exact CPU-only decode of .tsb containers in the browser, plus the one-tag <oham-stream> element. Addresses, not pixels.",
   "main": "web/oham-element.js",
   "files": [
@@ -10,7 +10,9 @@
     "LICENSE.commons-clause",
     "COMMERCIAL_LICENSE.md",
     "NOTICE",
-    "DOGFOOD.md"
+    "DOGFOOD.md",
+    "EXPORT_MANIFEST.txt",
+    "dogfood.sh"
   ],
   "keywords": [
     "video",
