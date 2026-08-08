@@ -30,10 +30,9 @@ right pixels on your machine. Expect `OHAM_DOCTOR_OK`.
 ## Reading is local; sealing is a service
 
 Everything below runs entirely on your machine — no network, no service, no
-key, no GPU, no codec. **Writing** (sealing new content) runs behind the
-OHAM API, so the substrate itself is never distributed; `oham seal --api`
-is the client half and says so when you call it without one. Nothing you
-decode ever depends on the service.
+key, no GPU, no codec. **Writing** runs behind the OHAM API, so the
+substrate itself is never distributed. Nothing you decode ever depends on
+the service.
 
 ## Five minutes, with the hashes that prove each step
 
@@ -75,6 +74,34 @@ oham unseal still300.tsb --tick 0 --window 1024,512,1536,1024 --png crop.png
 
 1,537 addresses out of the frame's ~37,000. You never download the image;
 you read a rectangle of the inscription.
+
+### Seal a picture of your own — no token, no setup
+
+Any PNG or JPEG works — the step just above wrote `crop.png`, so this runs
+straight after it:
+
+```sh
+oham seal -o mine.tsb --image crop.png
+```
+
+That is the whole write side for a picture. It posts to the public
+converter, which chooses the block size, tile count and mode from your
+image's own dimensions and **prints what it chose**:
+
+```
+sealed -> mine.tsb · 22916 B · sha256/16 5957a6ad5cba0022
+  chosen: width 512 · height 512 · block 8 · tiles 2 · grid 64x64 · mode standard · q 2 · magbits 7
+```
+
+The response is kept **only** if it passes the container law — a JSON error
+body saved under a `.tsb` name would otherwise look like a success. Then
+read it back with the commands below; that round trip is the whole system in
+two lines.
+
+Sealing **video** goes through a token-gated endpoint:
+`oham seal -o out.tsb --api <url> -- --w 1920 --h 1088 --frames 60`, with
+the token in `$OHAM_API_TOKEN`, `$HF_TOKEN` or `~/.config/oham/token` (it
+never rides argv). Ask via <https://involvedinvolutions.com>.
 
 **Convert wire forms, reversibly.** v2 deflates each record; v1 restores it.
 The round trip is verified *before* the output file exists.
@@ -135,10 +162,23 @@ from a table:
 | `V3` | the block grid is identical at every rung |
 | `V4` | an excerpt's frame is byte-identical to the source's |
 | `V5` | v1 → v2 → v1 reproduces the input container exactly |
-| `V6` | **a corrupt container is refused** |
+| `V6` | **every structural corruption is refused** — swept, not a single flip |
 
 `V6` is the one that makes the rest mean something: a verifier that only
 ever sees good input hasn't shown it can tell the difference.
+
+It also prints what this build **cannot** check. The container carries no
+payload checksum, so a damaged *record* can decode to wrong pixels with
+nothing to compare against. Rather than hide that, every run measures it:
+
+```
+NOTE payload corruption, 24 single-byte flips through the records:
+     4 detected · 2 inert · 3 crashed the decoder ·
+     15 DECODED TO WRONG PIXELS UNDETECTED.
+```
+
+Structure is checked; pixels are not. That is a limit of the format as it
+stands, disclosed on every run rather than discovered later.
 
 Run the same laws against **your own** file:
 

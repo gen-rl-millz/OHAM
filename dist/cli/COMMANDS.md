@@ -146,13 +146,21 @@ Options:
 
 ### `oham seal`
 ```sh
-oham seal -o out.tsb --api $OHAM_API -- --w 1920 --h 1088 --frames 60
+oham seal -o mine.tsb --image photo.png
 ```
-sealing runs as a service; set OHAM_API_TOKEN (or HF_TOKEN, or ~/.config/oham/token) — the token never appears in process listings. The response is kept only if its transport hash and structure verify
+the ONE write command that needs nothing set up: it posts your picture to the public converter, which picks block/tiles/mode from the image's own size and prints what it chose. The response is kept only if it passes the container law. Then read it back with the commands above — that round trip is the whole system in two lines
 ```
 Seal a source into a .tsb (development tree, or the OHAM sealing API)
 
-In the development tree this drives the gated encoder pipeline exactly as a hand run would, so gate C1 can demand byte-identical containers. Outside it, sealing is offered through the OHAM API — the sealed format stays fully readable locally either way.
+THREE MODES, and the first needs nothing set up:
+
+oham seal -o out.tsb --image photo.png a picture, through the public converter. No token, no --api. The service picks block/tiles/mode from the image's own size and prints what it chose.
+
+oham seal -o out.tsb --api <url> -- --w 1920 --h 1088 --frames 60 video, through a token-gated endpoint.
+
+oham seal -o out.tsb -- <encoder flags> inside the development tree only: drives the gated pipeline exactly as a hand run would, so gate C1 can demand byte-identical containers.
+
+Reading is local in every case — the sealed format never needs a service to open.
 
 Usage: oham seal [OPTIONS] --out <OUT> [-- <ENCODER>...]
 
@@ -169,6 +177,9 @@ Options:
 
       --y4m <Y4M>
           y4m source file (API mode; empty = the deterministic synthetic source)
+
+      --image <IMAGE>
+          seal a PICTURE (png/jpg/...) through the public converter — the no-token path. Uses <api>/api/seal, which chooses block, tiles and mode for you from the image's own size, and needs no encoder flags. Defaults --api to the public converter
 
       --workdir <WORKDIR>
           working directory for segments/sidecars (default: <out>.seal/)

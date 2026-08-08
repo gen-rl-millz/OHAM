@@ -163,6 +163,26 @@ const TOOLS = [
     },
   },
   {
+    name: "oham_seal_image",
+    description:
+      "Seal a picture (png/jpg/...) into a .tsb container through the public converter. This is the WRITE side and it needs no token and no endpoint — the service picks block size, tile count and mode from the image's own dimensions and reports what it chose. The response is kept only if it passes the container law. Reading the result back needs no service at all.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        image: { type: "string", description: "path to the source picture" },
+        output: { type: "string", description: "path to write the .tsb; must not exist unless force" },
+        api: { type: "string", description: "override the endpoint (default: the public converter)" },
+        force: { type: "boolean", description: "overwrite an existing output file" },
+      },
+      required: ["image", "output"], additionalProperties: false,
+    },
+    handler: async (a) => {
+      const r = await run(["seal", "-o", a.output, "--image", a.image,
+                           ...(a.api ? ["--api", a.api] : [])]);
+      return r.ok ? text(r.out) : fail(r);
+    },
+  },
+  {
     name: "oham_excerpt",
     description:
       "Cut frames into their own standalone .tsb — no re-encode, records carried byte-for-byte. One tick makes a full-quality still. ticks accepts '300', '50,300,900', '0..120' (end-exclusive), or 'all'. NOTE: the output's ticks are RENUMBERED FROM 0 — excerpting tick 300 gives a file whose only frame is tick 0, so read it back with tick 0, not 300. The source ticks are not recorded in the output; keep that mapping yourself if you need it. Refuses to overwrite an existing output unless force is set, and never allows input == output.",
@@ -320,7 +340,7 @@ createInterface({ input: process.stdin }).on("line", async (line) => {
     if (method === "initialize") {
       reply(id, {
         protocolVersion: params?.protocolVersion || "2024-11-05",
-        serverInfo: { name: "oham-mcp", version: "0.2.4" },
+        serverInfo: { name: "oham-mcp", version: "0.2.5" },
         capabilities: { tools: {} },
       });
     } else if (method === "notifications/initialized" || method === "notifications/cancelled") {
