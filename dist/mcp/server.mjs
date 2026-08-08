@@ -214,7 +214,7 @@ createInterface({ input: process.stdin }).on("line", async (line) => {
     if (method === "initialize") {
       reply(id, {
         protocolVersion: params?.protocolVersion || "2024-11-05",
-        serverInfo: { name: "oham-mcp", version: "0.2.2" },
+        serverInfo: { name: "oham-mcp", version: "0.2.3" },
         capabilities: { tools: {} },
       });
     } else if (method === "notifications/initialized" || method === "notifications/cancelled") {

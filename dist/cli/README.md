@@ -9,7 +9,9 @@ Three properties follow, and they are the whole tool:
 - **Any frame, any moment, the same cost.** No keyframes, no prediction
   chain — one 12-byte index read plus one record read.
 - **Any size is an exact masked read of the same content.** Level 0 is
-  native; each level up halves both axes. No transcode, no second file, no
+  native; each level up halves the block edge while keeping the block grid
+  identical — so a 4096×2160 frame at block 64 is a 64×34 grid at every
+  rung, and L1 is 2048×**1088**, not 1080. No transcode, no second file, no
   pyramid.
 - **A window costs the window.** Reading a 512×512 rectangle of an
   8.8-megapixel image touches 1,537 addresses, and the pixels are identical
@@ -116,11 +118,37 @@ overrides the lookup entirely.
 
 `npm i --no-optional` skips the binary — `oham doctor` will tell you so.
 
-## Prove it yourself
+## Prove it yourself — offline, in one command
 
-`dogfood.sh` re-checks every claim above by byte comparison and prints
-`DOGFOOD_GREEN n/n`. It downloads the two published demo clips (~211 MB), so
-it is the thorough path, not the quick one; `oham doctor` is the quick one.
+```sh
+oham verify
+```
+
+Six checks, each a byte comparison this run made, against a container
+carried inside the binary. Nothing is downloaded and nothing is asserted
+from a table:
+
+| | |
+|---|---|
+| `V1` | the receiver reproduces a digest fixed at build time |
+| `V2` | a windowed read equals that rectangle of the full decode |
+| `V3` | the block grid is identical at every rung |
+| `V4` | an excerpt's frame is byte-identical to the source's |
+| `V5` | v1 → v2 → v1 reproduces the input container exactly |
+| `V6` | **a corrupt container is refused** |
+
+`V6` is the one that makes the rest mean something: a verifier that only
+ever sees good input hasn't shown it can tell the difference.
+
+Run the same laws against **your own** file:
+
+```sh
+oham verify --clip still300.tsb
+```
+
+If a hash differs from one printed here, run `oham doctor` first — it
+separates a broken install from a real finding, and a real finding is worth
+reporting.
 
 ## Licence
 

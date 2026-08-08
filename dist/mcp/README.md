@@ -23,9 +23,7 @@ claude mcp add oham -- node /path/to/oham/dist/mcp/server.mjs
 {
   "mcpServers": {
     "oham": {
-      "command": "node",
-      "args": ["/path/to/oham/dist/mcp/server.mjs"],
-      "env": { "OHAM_BIN": "/path/to/oham/bin/linux-x86_64/oham" }
+      "command": "oham-mcp"
     }
   }
 }

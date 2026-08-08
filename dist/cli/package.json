@@ -1,7 +1,7 @@
 {
   "name": "oham-cli",
-  "version": "0.2.2",
-  "description": "OHAM — OrthoHolonic Accessible Memory. The `oham` command line: inspect, decode any frame/window, excerpt stills, convert wire forms, and range-serve sealed .tsb containers. Exact integer decode, entirely local — no service, no GPU, no codec.",
+  "version": "0.2.3",
+  "description": "OHAM \u2014 OrthoHolonic Accessible Memory. The `oham` command line: inspect, decode any frame/window, excerpt stills, convert wire forms, and range-serve sealed .tsb containers. Exact integer decode, entirely local \u2014 no service, no GPU, no codec.",
   "bin": {
     "oham": "bin/oham"
   },
@@ -9,14 +9,13 @@
     "bin/oham",
     "README.md",
     "COMMANDS.md",
-    "dogfood.sh",
     "LICENSE",
     "LICENSE.apache2",
     "LICENSE.commons-clause",
     "NOTICE"
   ],
   "optionalDependencies": {
-    "oham-cli-linux-x64": "0.2.2"
+    "oham-cli-linux-x64": "0.2.3"
   },
   "engines": {
     "node": ">=16"

@@ -15,7 +15,7 @@ reordering.
 Live demo (frozen, verified at 60 fps on-device):
 <https://storage.googleapis.com/framecore-etch-video/edge.html>
 
-## What this repository is
+## What this is
 
 The **usable tool**: the reader/player half of OHAM, complete and
 verified — the `oham` CLI, the browser receiver (WebAssembly + pages),
@@ -55,11 +55,8 @@ oham repack clip.tsb clipz.tsb --v2
 oham about
 ```
 
-*From a clone of this repository* the same binary is prebuilt at
-`bin/linux-x86_64/oham` (checksum in `SHA256SUMS`) — put it on your PATH,
-or prefix each command with that path. Full flag surface:
-[`dist/cli/COMMANDS.md`](dist/cli/COMMANDS.md), generated from the
-binary's own `--help` and gated against drift.
+The full flag surface ships with the package as `COMMANDS.md`, generated
+from the binary's own `--help` so it cannot drift from what you installed.
 
 Sealing through the OHAM API (the write side lives behind the private
 backend and is called, never shipped — the response is verified against
@@ -94,9 +91,21 @@ try `oham serve . --port 8207` then open
 
 ## Try it yourself, objectively
 
-`DOGFOOD.md` is a cold-start exercise where every step prints the hash
-it must produce — run `./dogfood.sh` and the verdict is a byte
-comparison, not an impression.
+```sh
+oham verify                    # the built-in container
+oham verify --clip yours.tsb   # the same laws, against your own file
+```
+
+Six checks, each a byte comparison that run made, offline: the receiver
+against a digest fixed at build time · a windowed read against that
+rectangle of the full decode · the block grid identical at every rung ·
+an excerpt's frame against the source's · v1 → v2 → v1 against the input
+· and **a corrupt container refused**. That last one is what makes the
+other five mean something — a verifier that only ever sees good input has
+not shown it can tell the difference.
+
+The verdict is `OHAM_VERIFY_GREEN n/n`, and it is a byte comparison
+rather than an impression.
 
 ## Add the stream to any page — one tag
 
@@ -113,8 +122,9 @@ demo because it *is* the demo.
 
 ## The web receiver
 
-`web/` is a byte-exact copy of the frozen, verified deployment (each
-file's hash is pinned in `EXPORT_MANIFEST.txt`): the streaming player
+`web/` is a byte-exact copy of the frozen, verified deployment, each
+file hash-pinned against the release manifest at export time: the
+streaming player
 (`edge.html`), banked locked-60 playback (`edge-next.html`), the wire
 probe (`wire-probe.html`), the decode worker, and `oham.wasm` — the
 CPU-only receiver that runs identically in every browser.

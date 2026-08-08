@@ -1,9 +1,8 @@
 # `oham` — command reference
 
-**Generated from the binary's own `--help`.** Do not edit by hand: gate `N4`
-in `labs/oham_cli_reach_v1` regenerates this file and fails on any diff, so a
-hand edit is reported as drift. Regenerate with
-`labs/oham_cli_reach_v1/experiments/gen_command_reference.py <oham> COMMANDS.md`.
+**Generated from the binary's own `--help`.** Do not edit by hand: a release
+gate regenerates this file from the binary and fails on any diff, so a hand
+edit is reported as drift rather than shipped.
 
 Reading a container is entirely local — `info`, `unseal`, `excerpt`, `repack`
 and `serve` need no network, no service, no GPU and no codec. **Sealing runs
@@ -194,6 +193,29 @@ A checksum of the executable proves the file arrived; it says nothing about whet
 Usage: oham doctor [OPTIONS]
 
 Options:
+      --json
+          machine-readable (one JSON object)
+
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+### `oham verify`
+```sh
+oham verify
+```
+re-checks the laws above by BYTE COMPARISON against a container carried inside this binary — window == crop, the rung grid, excerpt verbatim, the wire round trip, and a corrupt container refused. Nothing is downloaded. `oham verify --clip yours.tsb` runs the same laws against your own file; expect OHAM_VERIFY_GREEN
+```
+Re-check the laws this tool claims, by byte comparison, offline
+
+Every check is a comparison of bytes this run produced — nothing is taken on trust and nothing is downloaded. Runs against a container carried inside the binary, or against `--clip <your file>`.
+
+Usage: oham verify [OPTIONS]
+
+Options:
+      --clip <CLIP>
+          verify these laws against your own container instead of the built-in one (the laws are the container's, not the fixture's)
+
       --json
           machine-readable (one JSON object)
 
