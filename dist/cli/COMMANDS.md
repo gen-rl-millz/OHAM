@@ -66,7 +66,7 @@ a standalone sealed file, no re-encode; one tick = a full-quality still
 ```
 Cut frames into a standalone .tsb — records carried verbatim, no re-encode; a one-tick excerpt IS the still form
 
-Usage: oham excerpt --tick <TICK> <INPUT> <OUTPUT>
+Usage: oham excerpt [OPTIONS] --tick <TICK> <INPUT> <OUTPUT>
 
 Arguments:
   <INPUT>   
@@ -74,6 +74,7 @@ Arguments:
 
 Options:
       --tick <TICK>  which frames: `300` · `50,300,900` · `0..120` · `all`
+      --force        overwrite an existing output file (never permits input == output)
   -h, --help         Print help
 ```
 
@@ -92,9 +93,10 @@ Arguments:
   <OUTPUT>  
 
 Options:
-      --v1    produce the v1 raw-record form (inflate)
-      --v2    produce the v2 z-wire form (deflate; verified reversible before writing)
-  -h, --help  Print help
+      --v1     produce the v1 raw-record form (inflate)
+      --v2     produce the v2 z-wire form (deflate; verified reversible before writing)
+      --force  overwrite an existing output file (never permits input == output)
+  -h, --help   Print help
 ```
 
 ### `oham serve`
