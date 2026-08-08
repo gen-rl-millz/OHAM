@@ -24,14 +24,20 @@ structure, frame count, sizes, digests; refuses corrupt files with the reason
 ```
 Structure, census, and digests of a .tsb container
 
+STRUCTURE_OK means the container's shape is sound: magic, version, sections tiling exactly to EOF, the index consistent with the header, and the two copies of the inner header agreeing. It does NOT mean the pixels are intact — the container stores no payload checksum, so a damaged record can still report STRUCTURE_OK here. `oham verify --clip <file>` is the integrity check; `unseal` is what actually rejects a record it cannot read.
+
 Usage: oham info [OPTIONS] <FILE>
 
 Arguments:
-  <FILE>  
+  <FILE>
+          
 
 Options:
-      --json  machine-readable output (one JSON object)
-  -h, --help  Print help
+      --json
+          machine-readable output (one JSON object)
+
+  -h, --help
+          Print help (see a summary with '-h')
 ```
 
 ### `oham unseal`
@@ -45,17 +51,37 @@ Exact RGBA of one or many frames — reads only the bytes each frame needs
 Usage: oham unseal [OPTIONS] --tick <TICK> <FILE>
 
 Arguments:
-  <FILE>  
+  <FILE>
+          
 
 Options:
-      --tick <TICK>      which frames: `50` · `50,300,900` · `0..120` (end-exclusive) · `all`
-      --level <LEVEL>    resolution rung: 0 = native, each level up halves both axes [default: 0]
-      --raw <RAW>        write raw RGBA bytes (file for one tick, directory for many)
-      --ppm <PPM>        write PPM (P6) images
-      --png <PNG>        write PNG images
-      --window <WINDOW>  resolve ONLY a pixel window `x0,y0,x1,y1` (coords at the chosen level) — the cost is set by the window, not the frame
-      --json             machine-readable output (one JSON array)
-  -h, --help             Print help
+      --tick <TICK>
+          which frames: `50` · `50,300,900` · `0..120` (end-exclusive) · `all`
+
+      --level <LEVEL>
+          resolution rung: 0 = native, each level up halves both axes
+          
+          [default: 0]
+
+      --raw <RAW>
+          write raw RGBA bytes (file for one tick, directory for many)
+
+      --ppm <PPM>
+          write PPM (P6) images
+
+      --png <PNG>
+          write PNG images
+
+      --window <WINDOW>
+          resolve ONLY a pixel window `x0,y0,x1,y1` (coords at the chosen level) — the cost is set by the window, not the frame.
+          
+          The rectangle SNAPS OUTWARD to whole blocks, because the block is the unit the receiver addresses: asking for `100,100,200,200` on a block-64 stream returns 192x192 at 64,64. The output line always states the rectangle actually returned, and those pixels are byte-identical to that rectangle of the full decode.
+
+      --json
+          machine-readable output (one JSON array)
+
+  -h, --help
+          Print help (see a summary with '-h')
 ```
 
 ### `oham excerpt`
