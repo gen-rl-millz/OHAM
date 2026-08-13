@@ -61,7 +61,7 @@ runs:
         fail=0
         for f in "${files[@]}"; do
           echo "### oham verify $f" >> "$GITHUB_STEP_SUMMARY"
-          out="$("$OHAM_WORK/oham" verify "$f" --json --jobs "${{ inputs.jobs }}")" \
+          out="$("$OHAM_WORK/oham" verify --clip "$f" --json --jobs "${{ inputs.jobs }}")" \
             && ok=1 || ok=0
           { echo '```json'; echo "$out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           if [ "$ok" -ne 1 ]; then
