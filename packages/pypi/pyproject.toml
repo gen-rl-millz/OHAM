@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "oham"
-version = "0.2.0"
+version = "0.2.8"
 description = "OHAM — OrthoHolonic Accessible Memory. Exact reader for .tsb sealed containers: inspect, unseal (frames/windows), serve, repack, excerpt."
 readme = "README.md"
 requires-python = ">=3.9"
