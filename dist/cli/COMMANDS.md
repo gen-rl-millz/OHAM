@@ -16,15 +16,67 @@ whole tool with the hashes that prove each step).
 
 ## The commands
 
-### `oham info`
-```sh
-oham info driving60q2.tsb --json
+### `oham transfer`
 ```
-structure, frame count, sizes, digests; refuses corrupt files with the reason
+Verified, bounded network transfer of exact bytes
+
+Usage: oham transfer <COMMAND>
+
+Commands:
+  pull  Pull exact bytes with strict HTTP ranges, resume, and final SHA-256
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help  Print help
+```
+
+### `oham bundle`
+```
+Typed multistream TSB/2 bundles with a dedicated integrity ledger
+
+Usage: oham bundle <COMMAND>
+
+Commands:
+  create   Create a typed bundle; each value is DOMAIN=PATH
+  append   Atomically append streams by rebuilding the directory and integrity ledger
+  list     List typed stream metadata without materializing payloads
+  extract  Extract one stream; defaults to stream 0, or select by unique domain
+  range    Read an exact byte range from one stream payload
+  stream   Read one bounded stream chunk and return the resume cursor
+  verify   Verify the final integrity LEDGER against every payload and aux section
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help  Print help
+```
+
+### `oham object`
+```
+Exact typed objects: store, inspect, range, stream, transfer, verify, and restore
+
+Usage: oham object <COMMAND>
+
+Commands:
+  store           Store one file as an exact typed TSB/2 object
+  inspect         Inspect the typed directory without materializing its payload
+  read            Read the complete exact payload without applying a semantic adapter
+  restore         Restore the complete exact payload to a filesystem file
+  range           Read an exact byte range into a file
+  stream          Read the next bounded chunk; `next_offset` is the resume cursor
+  transfer        Copy an object without interpreting its domain
+  verify          Verify structure and the stored SHA-256 payload digest
+  clean-partials  Find or explicitly remove stale staged outputs for one destination
+  help            Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help  Print help
+```
+
+### `oham info`
 ```
 Structure, census, and digests of a .tsb container
 
-STRUCTURE_OK means the container's shape is sound: magic, version, sections tiling exactly to EOF, the index consistent with the header, and the two copies of the inner header agreeing. It does NOT mean the pixels are intact — the container stores no payload checksum, so a damaged record can still report STRUCTURE_OK here. `oham verify --clip <file>` is the integrity check; `unseal` is what actually rejects a record it cannot read.
+STRUCTURE_OK means the container's shape is sound: magic, version, sections tiling exactly to EOF, the index consistent with the header, and the two copies of the inner header agreeing. It does NOT mean the pixels are intact — the file carries no checksum over its picture data, so damaged picture data can still report STRUCTURE_OK here, and nothing in this tool can tell you otherwise. `oham verify --clip <file>` re-checks the format's rules, not the pixels; `unseal` is what actually rejects a record it cannot read.
 
 Usage: oham info [OPTIONS] <FILE>
 
@@ -41,14 +93,10 @@ Options:
 ```
 
 ### `oham unseal`
-```sh
-oham unseal driving60q2.tsb --tick 300 --level 1 --png frame.png
-```
-any frame, any size rung (level 0 = full size, each level halves it); t300 level 0 raw pixels hash to d7b3d597b92edda3 — check yourself
 ```
 Exact RGBA of one or many frames — reads only the bytes each frame needs
 
-Usage: oham unseal [OPTIONS] --tick <TICK> <FILE>
+Usage: oham unseal [OPTIONS] <FILE>
 
 Arguments:
   <FILE>
@@ -57,9 +105,11 @@ Arguments:
 Options:
       --tick <TICK>
           which frames: `50` · `50,300,900` · `0..120` (end-exclusive) · `all`
+          
+          [default: 0]
 
       --level <LEVEL>
-          resolution rung: 0 = native, each level up halves both axes
+          resolution rung: 0 = native. Each level up halves the BLOCK EDGE and keeps the block grid, so the pixel size follows the grid, not a plain halving: 4096x2160 at block 64 is 2048x1088 at level 1, not 1080
           
           [default: 0]
 
@@ -77,6 +127,9 @@ Options:
           
           The rectangle SNAPS OUTWARD to whole blocks, because the block is the unit the receiver addresses: asking for `100,100,200,200` on a block-64 stream returns 192x192 at 64,64. The output line always states the rectangle actually returned, and those pixels are byte-identical to that rectangle of the full decode.
 
+      --force
+          overwrite an existing output file (never permits input == output)
+
       --json
           machine-readable output (one JSON array)
 
@@ -85,30 +138,22 @@ Options:
 ```
 
 ### `oham excerpt`
-```sh
-oham excerpt driving60q2.tsb still.tsb --tick 300
-```
-a standalone sealed file, no re-encode; one tick = a full-quality still
 ```
 Cut frames into a standalone .tsb — records carried verbatim, no re-encode; a one-tick excerpt IS the still form
 
-Usage: oham excerpt [OPTIONS] --tick <TICK> <INPUT> <OUTPUT>
+Usage: oham excerpt [OPTIONS] <INPUT> <OUTPUT>
 
 Arguments:
   <INPUT>   
   <OUTPUT>  
 
 Options:
-      --tick <TICK>  which frames: `300` · `50,300,900` · `0..120` · `all`
+      --tick <TICK>  which frames: `300` · `50,300,900` · `0..120` · `all` [default: 0]
       --force        overwrite an existing output file (never permits input == output)
   -h, --help         Print help
 ```
 
 ### `oham repack`
-```sh
-oham repack driving60q2.tsb smaller.tsb --v2
-```
-~54% the size, verified reversible BEFORE the file is written; --v1 converts back byte-identically
 ```
 Convert between wire forms: v1 (raw records) and v2 (z-wire, deflated records)
 
@@ -121,22 +166,19 @@ Arguments:
 Options:
       --v1     produce the v1 raw-record form (inflate)
       --v2     produce the v2 z-wire form (deflate; verified reversible before writing)
+      --evd    add the per-record integrity lane (evd): an 8-byte corruption checksum per record, verified on every read. Detection, not cryptography — no keys, no authentication claim. With no wire-form flag the input's form is kept; a container already carrying the lane keeps it (and repack re-verifies every record in passing)
       --force  overwrite an existing output file (never permits input == output)
   -h, --help   Print help
 ```
 
 ### `oham serve`
-```sh
-oham serve . --port 8207
-```
-a range-request file server; the web receiver (web/ in the repo, or `npm i oham-stream`) plays from it
 ```
 HTTP range server (206 partial content, keep-alive, CORS *) — what the wire pages need
 
-Usage: oham serve [OPTIONS] <ROOT>
+Usage: oham serve [OPTIONS] [ROOT]
 
 Arguments:
-  <ROOT>  a .tsb file or a directory to serve
+  [ROOT]  a .tsb file or a directory to serve [default: .]
 
 Options:
       --port <PORT>  [default: 8207]
@@ -145,16 +187,12 @@ Options:
 ```
 
 ### `oham seal`
-```sh
-oham seal -o mine.tsb --image photo.png
-```
-the ONE write command that needs nothing set up: it posts your picture to the public converter, which picks block/tiles/mode from the image's own size and prints what it chose. The response is kept only if it passes the container law. Then read it back with the commands above — that round trip is the whole system in two lines
 ```
 Seal a source into a .tsb (development tree, or the OHAM sealing API)
 
 THREE MODES, and the first needs nothing set up:
 
-oham seal -o out.tsb --image photo.png a picture, through the public converter. No token, no --api. The service picks block/tiles/mode from the image's own size and prints what it chose.
+oham seal --image photo.png a picture, through the public converter. No token, no --api. The service picks block/tiles/mode from the image's own size and prints what it chose.
 
 oham seal -o out.tsb --api <url> -- --w 1920 --h 1088 --frames 60 video, through a token-gated endpoint.
 
@@ -162,7 +200,7 @@ oham seal -o out.tsb -- <encoder flags> inside the development tree only: drives
 
 Reading is local in every case — the sealed format never needs a service to open.
 
-Usage: oham seal [OPTIONS] --out <OUT> [-- <ENCODER>...]
+Usage: oham seal [OPTIONS] [-- <ENCODER>...]
 
 Arguments:
   [ENCODER]...
@@ -170,7 +208,7 @@ Arguments:
 
 Options:
   -o, --out <OUT>
-          output .tsb path
+          output .tsb path; image sealing defaults to IMAGE.tsb
 
       --api <API>
           seal through the OHAM API instead of a local tree, e.g. https://<private-backend>/ — auth via HF_TOKEN when the backend is a private Space. The response is verified against its own transport hash and the container law before it is kept
@@ -190,15 +228,22 @@ Options:
       --fps <FPS>
           override the prelude fps rational, e.g. 24:1 (structural patch, verified)
 
+      --force
+          overwrite an existing output file (never permits input == output)
+
+      --probe
+          PROBE ONLY: read the y4m source's own geometry/rate/content and print the recipe the documented laws select (grid-law block, the tiles rule, the smooth-content dial) as one JSON document — nothing is sealed and no output is written. Guided selection, so the flags need never be known
+
+      --mode <MODE>
+          the named form for --probe: auto (=standard) | performance | standard | quality — the vocabulary law: a mode is selected by name, never redefined at the point of use
+          
+          [default: auto]
+
   -h, --help
           Print help (see a summary with '-h')
 ```
 
 ### `oham about`
-```sh
-oham about
-```
-OHAM stores video/images as exact integer addresses in a sealed .tsb file. Any frame is readable at any moment at the same cost; every conversion is reversible; decoding never needs a network or a service.
 ```
 What OHAM is, and whose it is
 
@@ -210,20 +255,16 @@ Options:
 
 ### `oham onboard`
 ```
-Everything an agent or new user needs, in one read — plain words, copy-paste commands, and the hashes that prove your setup works
+Quick start for people using OHAM: common tasks, automatic defaults, and plain-language product limits
 
 Usage: oham onboard [OPTIONS]
 
 Options:
-      --json  machine-readable (one JSON object: commands, examples, goldens)
+      --json  machine-readable public quick start (one JSON object)
   -h, --help  Print help
 ```
 
 ### `oham doctor`
-```sh
-oham doctor
-```
-decodes a container carried inside the binary and compares the pixels to a digest fixed at build time; expect OHAM_DOCTOR_OK. Do this before reporting any hash below as wrong — it separates a broken install from a real finding
 ```
 Is this install working? Decodes a container carried inside the binary and checks the pixels against a digest fixed at build time
 
@@ -239,15 +280,24 @@ Options:
           Print help (see a summary with '-h')
 ```
 
-### `oham verify`
-```sh
-oham verify
+### `oham errors`
 ```
-re-checks the laws above by BYTE COMPARISON against a container carried inside this binary — window == crop, the rung grid, excerpt verbatim, the wire round trip, and a corrupt container refused. Nothing is downloaded. `oham verify --clip yours.tsb` runs the same laws against your own file; expect OHAM_VERIFY_GREEN
-```
-Re-check the laws this tool claims, by byte comparison, offline
+The stable refusal-code registry (`oham.error.v1`) — every refusal leads with one of these codes; the envelope contract is printed too
 
-Every check is a comparison of bytes this run produced — nothing is taken on trust and nothing is downloaded. Runs against a container carried inside the binary, or against `--clip <your file>`.
+Usage: oham errors [OPTIONS]
+
+Options:
+      --json  machine-readable (one JSON object)
+  -h, --help  Print help
+```
+
+### `oham verify`
+```
+Re-run the format's own laws against a container, offline
+
+This is a CONFORMANCE check, not an integrity check. It asks "does this file obey the laws the format declares, and does this build reproduce the reference decode?" — every leg a byte comparison this run made, nothing downloaded, nothing taken on trust.
+
+It CANNOT tell you a picture matches the source it was sealed from. The container stores no payload checksum, so there is nothing to compare a record against, and the source is not present. What a stream promises about its own reconstruction is a contract that stream declares; this checks the laws, and measures the blind spot.
 
 Usage: oham verify [OPTIONS]
 

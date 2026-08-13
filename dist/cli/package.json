@@ -1,6 +1,6 @@
 {
   "name": "oham-cli",
-  "version": "0.2.5",
+  "version": "0.2.7",
   "description": "OHAM \u2014 OrthoHolonic Accessible Memory. The `oham` command line: inspect, decode any frame/window, excerpt stills, convert wire forms, and range-serve sealed .tsb containers. Exact integer decode, entirely local \u2014 no service, no GPU, no codec.",
   "bin": {
     "oham": "bin/oham"
@@ -15,7 +15,7 @@
     "NOTICE"
   ],
   "optionalDependencies": {
-    "oham-cli-linux-x64": "0.2.5"
+    "oham-cli-linux-x64": "0.2.7"
   },
   "engines": {
     "node": ">=16"

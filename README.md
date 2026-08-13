@@ -2,13 +2,59 @@
 
 *A Paul Phillips / Involved Involutions manifestation.*
 
-**A sealed-media substrate that stores addresses, not pixels.** Content
-lives in a `.tsb` sealed container and is reconstructed bit-exactly on
-any device by a small CPU-only receiver — no GPU, no codecs, integer
-arithmetic end to end. Any frame is readable at any moment at the same
-cost (no keyframes), any output size is an exact masked read of the same
-sealed content (no transcodes), and streams survive arbitrary delivery
-reordering.
+**Huge pictures and video, usable on the device that receives them.**
+
+- A **423-megapixel** photograph ships as a **712 KB** file and opens on a phone.
+- **4K video at 60 fps on a phone CPU** — no GPU, no codec installed, nothing
+  to license.
+- One frame of a 136 MB clip is fetched by reading **116 KB** of it.
+
+That is the same job a compression format does for you. OHAM gets there a
+different way — it *names* content instead of storing a picture stream — and
+that difference is what buys three things a codec cannot do:
+
+| | |
+|---|---|
+| **Any frame, any moment** | for the cost of that frame. No keyframes, no prediction chain; join a stream anywhere and the picture is right. |
+| **Any size from the one file** | thumbnail, half, native — each an exact read of the same file. No transcode, no pyramid, no second file. |
+| **Any rectangle for the cost of the rectangle** | a 512×512 crop of an 8.8 MP frame reads 1,537 addresses instead of ~37,000. You never download the picture. |
+
+**Quality is a dial, as in any format** — `performance` / `standard` /
+`quality`. Standard deliberately picks the coarsest form that still clears
+the density floor, so smooth gradients can show block edges; quality keeps
+more detail for more bytes.
+
+**Separately and always:** every machine decoding the same file computes the
+**same bytes**. Integer arithmetic end to end, no floating point anywhere, so
+the phone, the browser and the command line cannot disagree. That is
+determinism across machines — a different promise from how much detail a
+given quality setting kept, and the two are never merged.
+
+## The one size rule: high inscription, adaptive read
+
+Definition of record: `docs/specs/OHAM_HIGH_FIRST_ADAPTIVE_READ_POLICY_2026_08_11.md`.
+
+**Seal high once; read small whenever needed.** Preserve the highest useful
+native detail in one inscription. Do not make a smaller sealed master because
+today's phone, pane, bandwidth tier, or low-resolution stream is small. That
+receiver asks the same high inscription for a coarser rung or a smaller window.
+A thumbnail, a low-resolution stream, an HD panel, and an Ultra HD expansion
+are views of one file—not four encodes.
+
+This is also the cheaper direction for OHAM. Small inscriptions are the
+expensive regime: on the same footage, 640×352 cost more absolute record bytes
+than 1024×576 at all three tested quality settings. A 97.3 MP q3 field cost 700,528 bytes versus 902,328 bytes for the 10.8 MP
+q0 wall, but that q3 field was +2 MAD at both displayed views and missed the
+preregistered within-1 quality rule; the accepted q1 field cost 2,262,223
+bytes. **Never shrink the master by assumption: compare storage and displayed
+quality together, then read smaller views adaptively.**
+
+For many related small sources, place their native samples as block-aligned
+windows in a larger shared inscription so identity/open/request overhead is
+paid once. Do not stretch a low-resolution source and call it Ultra HD:
+interpolation invents no detail. The high-first rule preserves the highest
+*available* detail and lets every smaller receiver materialize only what it
+can use.
 
 **Sole developer: [Paul Phillips](https://involvedinvolutions.com).**
 
@@ -66,7 +112,7 @@ its transport hash and the container law before it is kept):
 oham seal -o out.tsb --api https://<oham-api> [--y4m src.y4m] -- --w 1920 --h 1088 --frames 60
 ```
 
-Every conversion is **reversible and verified**: the compressed z-wire
+The **wire forms** convert **reversibly and verifiably**: the compressed z-wire
 form converts back to the original container byte-identically, and the
 CLI produces the same pixel bytes as the browser receiver for the same
 input — these are gated claims, checked on every release, not promises.
@@ -96,16 +142,90 @@ oham verify                    # the built-in container
 oham verify --clip yours.tsb   # the same laws, against your own file
 ```
 
-Six checks, each a byte comparison that run made, offline: the receiver
-against a digest fixed at build time · a windowed read against that
-rectangle of the full decode · the block grid identical at every rung ·
-an excerpt's frame against the source's · v1 → v2 → v1 against the input
-· and **a corrupt container refused**. That last one is what makes the
-other five mean something — a verifier that only ever sees good input has
-not shown it can tell the difference.
+Six things the file must do, each tried on your machine, just now, offline:
 
-The verdict is `OHAM_VERIFY_GREEN n/n`, and it is a byte comparison
-rather than an impression.
+- this machine decodes to the same pixels the build did
+- reading a rectangle gives the same pixels as cropping the whole picture
+- every size comes out of the one file, and they line up
+- cutting a frame out changes nothing about it
+- the compressed wire form converts back to the original, byte for byte
+- **a damaged file is refused, not half-read**
+
+That last one is what makes the other five mean something — a checker that
+only ever sees good input has not shown it can tell the difference.
+
+Every answer is a byte comparison rather than an impression, and the run
+also prints **what it cannot tell you**: whether the picture inside is the
+picture that went in. The file carries no checksum over its picture data
+and the original is not present, so that question is out of reach — stated
+on every run rather than left to be discovered.
+
+## Exact typed files and bundles
+
+Media keeps its high-first read surface above. Arbitrary exact bytes use the
+separate typed-object and multistream lanes; carrying a domain never pretends
+to understand it.
+
+The shortest safe paths require no storage-theory vocabulary:
+
+```sh
+oham unseal picture.tsb --png picture.png       # tick 0, native view
+oham excerpt video.tsb still.tsb                # tick 0
+oham repack input.tsb other-wire-form.tsb       # direction inferred
+oham serve                                      # current directory on localhost:8207
+oham object store notes.txt --json              # writes notes.txt.tsb2
+oham seal --image portrait.png                   # writes portrait.tsb
+```
+
+Ticks, rungs, windows, wire forms, rails, stream indices, offsets, chunk sizes,
+timeouts and retry ceilings are optional controls for specialized work, not
+prerequisites for normal use.
+
+```sh
+oham object store notes.txt notes.tsb2 --domain textutf8 --json
+oham object verify notes.tsb2 --json
+oham object restore notes.tsb2 restored.txt --json
+
+oham bundle create session.tsb2 \
+  --stasis textutf8=notes.txt \
+  --flux etchtape=events.bin --json
+oham bundle list session.tsb2 --json
+oham bundle append session.tsb2 --ledger auditlog=audit.bin --json
+oham bundle range session.tsb2 piece.bin --index 1 --offset 4096 --length 65536 --json
+oham bundle stream session.tsb2 chunk.bin --index 1 --offset 65536 --chunk-size 65536 --json
+oham bundle verify session.tsb2 --json
+oham bundle extract session.tsb2 events.out --index 1 --json
+oham bundle extract session.tsb2 events.out --domain etchtape --json
+```
+
+Use the domain name when that is what you know; OHAM resolves it only when the
+match is unique. Duplicate domain names refuse with a request to use `--index`
+instead of silently selecting the wrong stream.
+
+Append rebuilds and atomically replaces the complete directory and integrity
+ledger; it never exposes an in-place half-update. Bundle verification uses a final typed integrity LEDGER that binds every
+payload and every domain aux section independently. Unknown domains remain
+opaque, STASIS/FLUX/LEDGER remain distinct, and every output is committed by
+staging, fsync, and atomic rename.
+
+Verified network pull is the same exact-byte boundary, not a decoder:
+
+```sh
+oham transfer pull https://host.example/session.tsb2 local.tsb2 \
+  --sha256 EXPECTED_64_HEX_DIGEST --json
+```
+
+It resumes from a staged byte cursor, requires strict HTTP ranges, requires
+HTTPS away from localhost, and publishes only after SHA-256 verification.
+Authorization, HTTP conformance, and payload integrity are separate receipt
+fields. Transport failures retry at the same unacknowledged cursor under an
+explicit ceiling (`--retries`); the receipt reports retries used. Network push
+is not shipped yet.
+
+For automation, `--chunk-size 0` and `--timeout-seconds 0` mean “choose the
+safe default” (64 KiB and 30 seconds) rather than failing. Oversized chunk
+requests cap at 16 MiB. JSON reports all effective values and whether defaults
+were applied, so convenience never becomes invisible behavior.
 
 ## Add the stream to any page — one tag
 
