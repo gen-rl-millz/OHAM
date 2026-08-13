@@ -6,6 +6,14 @@ name: release
 on:
   push:
     tags: ["v*"]
+  # Manual cut: the sealed-session git proxy can push branches but not tags,
+  # so a dispatch with a tag input lets `gh release create` mint the tag at
+  # HEAD itself (same assets, same notes, no external secrets).
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create (e.g. v0.2.8)"
+        required: true
 permissions:
   contents: write
   packages: write
@@ -14,20 +22,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: resolve tag
+        run: echo "TAG=${{ inputs.tag || github.ref_name }}" >> "$GITHUB_ENV"
       - name: package assets
         run: |
-          tar -C bin/linux-x86_64 -czf oham-${GITHUB_REF_NAME}-linux-x86_64.tar.gz oham SHA256SUMS
-          (cd web && zip -qr ../oham-${GITHUB_REF_NAME}-web.zip .)
-          sha256sum oham-${GITHUB_REF_NAME}-linux-x86_64.tar.gz oham-${GITHUB_REF_NAME}-web.zip > RELEASE_SHA256SUMS
+          tar -C bin/linux-x86_64 -czf oham-${TAG}-linux-x86_64.tar.gz oham SHA256SUMS
+          (cd web && zip -qr ../oham-${TAG}-web.zip .)
+          sha256sum oham-${TAG}-linux-x86_64.tar.gz oham-${TAG}-web.zip > RELEASE_SHA256SUMS
       - name: create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            oham-${GITHUB_REF_NAME}-linux-x86_64.tar.gz \
-            oham-${GITHUB_REF_NAME}-web.zip \
+          gh release create "$TAG" \
+            oham-${TAG}-linux-x86_64.tar.gz \
+            oham-${TAG}-web.zip \
             RELEASE_SHA256SUMS \
-            --title "OHAM $GITHUB_REF_NAME" \
+            --title "OHAM $TAG" \
             --notes "OHAM — OrthoHolonic Accessible Memory. The usable reader: oham CLI (info · unseal · serve · repack · excerpt · windowed reads), the wasm receiver + pages, the one-tag <oham-stream> element. Every conversion reversible and gated; dogfood with ./dogfood.sh (every step prints the hash it must produce). Sealing is offered through the OHAM API — involvedinvolutions.com. Paul Phillips — solo developer · Apache-2.0 + Commons Clause."
 
   docker:
@@ -45,5 +55,5 @@ jobs:
           file: dist/docker/Dockerfile
           push: true
           tags: |
-            ghcr.io/gen-rl-millz/oham:${{ github.ref_name }}
+            ghcr.io/gen-rl-millz/oham:${{ inputs.tag || github.ref_name }}
             ghcr.io/gen-rl-millz/oham:latest
