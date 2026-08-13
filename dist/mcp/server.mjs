@@ -23,6 +23,13 @@ import { createInterface } from "node:readline";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const require_ = createRequire(import.meta.url);
+// The version this server REPORTS is the version it SHIPS as — read from its
+// own package.json, never hardcoded. (0.2.7's initialize said "0.2.5": a
+// string nobody bumps is a second source of truth, found by live-registry
+// verification and closed the way the CLI closed COMMANDS.md drift.)
+const PKG_VERSION = JSON.parse(
+  readFileSync(join(here, "package.json"), "utf8"),
+).version;
 
 // ONE binary, in ONE package. 0.2.1 carried its own copy while `oham-cli`
 // carried another, so the proof script and the executable it proves lived in
@@ -340,7 +347,7 @@ createInterface({ input: process.stdin }).on("line", async (line) => {
     if (method === "initialize") {
       reply(id, {
         protocolVersion: params?.protocolVersion || "2024-11-05",
-        serverInfo: { name: "oham-mcp", version: "0.2.5" },
+        serverInfo: { name: "oham-mcp", version: PKG_VERSION },
         capabilities: { tools: {} },
       });
     } else if (method === "notifications/initialized" || method === "notifications/cancelled") {

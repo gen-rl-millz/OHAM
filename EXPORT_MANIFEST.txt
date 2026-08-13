@@ -39,8 +39,8 @@ aa213371fb34c3516f4784cb492a5b5ab7cef6713b8790f26b86ee34df1bc0c0  ./dist/homebre
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./dist/mcp/LICENSE.apache2
 ee9a19b7933cf6ab0a6da4154c15cef2c045ecb246e95a060f4e90a63ca71921  ./dist/mcp/LICENSE.commons-clause
 79cb26951a227ce04bdb5a630b823df2df2f3fd4963b77eac1a0f3b55d4d12fa  ./dist/mcp/README.md
-3c67e7a293dde7a131b811f960ee5cffbaef944abd793d1508827750fd06d1c0  ./dist/mcp/package.json
-2d2afe9731a2fa61365ff928503348ff9e9420c572aac58701ec86b420177fd6  ./dist/mcp/server.mjs
+9dc9b1ec07035d3ac0b2a4aaf310c8f1afa0f8326db610726f2d143773716b89  ./dist/mcp/package.json
+59e5f5039b97161852df4e91e839a0da0d0cf772a6c056ec5d1e35f73f02ea2c  ./dist/mcp/server.mjs
 7c813c08a93b6f5874214715fc76b7358ce334da7fe86c6d599d611daef890d7  ./dist/obs/STATUS.md
 5b1931d72d9e1f21946765a1889413dd31dfcd83c87d05a219f8569ba295fb93  ./dist/unity-unreal/STATUS.md
 e9657d0070ec74e877e67562924ea8cd08df0667cb1c1b7ff9e81226d4c741aa  ./dist/vscode/STATUS.md
