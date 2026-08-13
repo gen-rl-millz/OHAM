@@ -23,8 +23,9 @@ Verified, bounded network transfer of exact bytes
 Usage: oham transfer <COMMAND>
 
 Commands:
-  pull  Pull exact bytes with strict HTTP ranges, resume, and final SHA-256
-  help  Print this message or the help of the given subcommand(s)
+  pull   Pull exact bytes with strict HTTP ranges, resume, and final SHA-256
+  fetch  Container-aware VERIFIED fetch of an evd-carrying .tsb: records are striped across the primary and every `--mirror`, each record verified against its own stored digest as it lands, and a record that fails on one source is refetched from another — the bad source is NAMED, never trusted. Corruption checksum, not cryptography: this verifies bytes against the container's own lane, it does not authenticate anyone
+  help   Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help  Print help
@@ -307,6 +308,11 @@ Options:
 
       --json
           machine-readable (one JSON object)
+
+      --jobs <JOBS>
+          parallel record verification for the evd lane (V7): 0 = one thread per available CPU. Records are independent, so the sweep scales; the verdict is identical at any job count
+          
+          [default: 1]
 
   -h, --help
           Print help (see a summary with '-h')
