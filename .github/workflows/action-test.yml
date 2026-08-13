@@ -1,0 +1,54 @@
+# Self-test for the OHAM Verify action (action.yml). The last step is the
+# falsifiability leg: a gate that cannot fail proves nothing, so the bare
+# container under require-evd MUST fail, and the workflow fails if it doesn't.
+name: action-test
+on:
+  workflow_dispatch:
+  push:
+    paths: ["action.yml", ".github/workflows/action-test.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: old-form container verifies green
+        uses: ./
+        with:
+          path: "web/still300.tsb"
+
+      - name: make a lane container in-run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download v0.2.8 -R gen-rl-millz/oham -p "*linux-x86_64.tar.gz" -D .
+          tar xzf ./*linux-x86_64.tar.gz && chmod +x oham
+          ./oham repack web/still300.tsb lane.tsb --evd
+          ./oham info lane.tsb
+
+      - name: lane container passes with require-evd
+        uses: ./
+        with:
+          path: "lane.tsb"
+          require-evd: "true"
+          jobs: "2"
+
+      - name: differential — bare container under require-evd
+        id: neg
+        continue-on-error: true
+        uses: ./
+        with:
+          path: "web/still300.tsb"
+          require-evd: "true"
+
+      - name: the differential must have failed
+        shell: bash
+        run: |
+          if [ "${{ steps.neg.outcome }}" != "failure" ]; then
+            echo "::error::require-evd accepted a bare container — the gate cannot fail"
+            exit 1
+          fi
+          echo "differential failed as required — the gate can fail"

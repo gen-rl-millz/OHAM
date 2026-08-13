@@ -23,6 +23,9 @@ function activate(ctx) {
       <p>${d.inner ? `${d.inner.magic} ${d.inner.w}x${d.inner.h} · ${d.inner.frames} frames ·
          block ${d.inner.block} · tiles ${d.inner.tiles_x}x${d.inner.tiles_y}` : "no inner header"}</p>
       <p>records ${d.records} · mean ${d.record_len_mean} B ${d.records_deflated ? "· z-wire" : ""}</p>
+      <p>${d.integrity_lane
+        ? "integrity: evd lane · per-record corruption checksum (not cryptography) · checked on every unseal"
+        : "integrity: no evd lane — add it with <code>oham repack IN OUT --evd</code>"}</p>
       <p><b>${d.verdict}</b></p>
       <hr><small>OHAM — OrthoHolonic Accessible Memory · Paul Phillips</small></body>`;
   }));

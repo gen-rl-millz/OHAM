@@ -1,0 +1,10 @@
+# Smithery launch spec for oham-mcp — OHAM sealed media as MCP tools.
+# The server is a thin stdio wrapper over the prebuilt oham CLI; no
+# configuration is required (the CLI ships inside the npm dependency).
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties: {}
+  commandFunction: |-
+    (config) => ({ command: "npx", args: ["-y", "oham-mcp"] })

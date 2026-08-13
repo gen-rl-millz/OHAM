@@ -1,4 +1,6 @@
+f3037a5c70c742949e510c18415d6c0db25af9b905aee72fcdb0482471e9fbe4  ./.github/workflows/action-test.yml
 78c4aecef984a45bb500be6687408b928677f0a93dd46eea2f6056b67befe75e  ./.github/workflows/release.yml
+509062bf827768e783fd7aef06f92fc7257cb6315f66eeee0ab3639408af57d5  ./.github/workflows/upload-assets.yml
 49512d2fa88750ce95081637099ee0802ec3dd06b5aa65347c01a33333575a2c  ./AUTH.md
 f2d6f1c30f76d378f27d0386471ba1bbb1cacbc5f08dbd7f657823dfa2e3fcc0  ./COMMERCIAL_LICENSE.md
 19f60a7756e52bb772af67a78bdf9fb2957b7de76a7336af3a3b86658db49915  ./DOGFOOD.md
@@ -7,6 +9,7 @@ cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./LICENSE.apac
 ee9a19b7933cf6ab0a6da4154c15cef2c045ecb246e95a060f4e90a63ca71921  ./LICENSE.commons-clause
 66844194d3a3a87c5f2378fecbb204f14640421cd2471a0dc900e2e290ef7ef6  ./NOTICE
 13a59f110f3bf66a6909e995dcc1d444a1de911baba6848071c5e37f1f8b3696  ./README.md
+417a51628c12a7dddd8b5a449d7ea30d05eea55e8b1f4d67582d8449c4d464b9  ./action.yml
 44b166aea50697795d100a8811d22375b992a038dc7b7e46ff6e7f19433c5f0e  ./bin/linux-x86_64/SHA256SUMS
 120229176cb46e20f1eea37e4be0266f35d9b518132adea4022e189d84d8ef2c  ./bin/linux-x86_64/oham
 5cb7075a6074ed94eeec440fda45734f3e57fb1fa870d55578e98a323abc524d  ./dist/README.md
@@ -40,12 +43,17 @@ cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./dist/mcp/LIC
 ee9a19b7933cf6ab0a6da4154c15cef2c045ecb246e95a060f4e90a63ca71921  ./dist/mcp/LICENSE.commons-clause
 79cb26951a227ce04bdb5a630b823df2df2f3fd4963b77eac1a0f3b55d4d12fa  ./dist/mcp/README.md
 9dc9b1ec07035d3ac0b2a4aaf310c8f1afa0f8326db610726f2d143773716b89  ./dist/mcp/package.json
+16592df9b3341b5c4bf42590e5554ebfc698d60cfe29cc40bf487989b7e6f1d8  ./dist/mcp/server.json
 59e5f5039b97161852df4e91e839a0da0d0cf772a6c056ec5d1e35f73f02ea2c  ./dist/mcp/server.mjs
+a80f5976ec8ad8a7bfc1d4b5260f757f7344b01cdaf27c12e53906c05cb5f3bd  ./dist/mcp/smithery.yaml
 7c813c08a93b6f5874214715fc76b7358ce334da7fe86c6d599d611daef890d7  ./dist/obs/STATUS.md
 5b1931d72d9e1f21946765a1889413dd31dfcd83c87d05a219f8569ba295fb93  ./dist/unity-unreal/STATUS.md
+9b71eeb773cefcc48899585b87cf88a5c0fbc0a6b540dea0ac837dce2a0aa7b3  ./dist/vscode/LICENSE
+9ba3777d94097492e537c9eb5535f72b9f9fcbfaf0d5c586af4ac2ca3b2f0636  ./dist/vscode/README.md
 e9657d0070ec74e877e67562924ea8cd08df0667cb1c1b7ff9e81226d4c741aa  ./dist/vscode/STATUS.md
-924bfd74020e3d33f7e2ab0ebf659247fdc117c01010e91ddbed3e8bbdd8c561  ./dist/vscode/extension.js
-a7af1cbe5985c24c99c1649e17f197c693b0ddc229642cd0a22a492a94673f1f  ./dist/vscode/package.json
+68ccd8d6b94546469800440cff12d504c67c9a10a550fedea88ef644cb3b2e1a  ./dist/vscode/extension.js
+57489d3280bf48877fcc0980b7566582c00c05f286d97c3d1e53be8eb0a390b8  ./dist/vscode/oham-tsb-0.2.8.vsix
+b4b7b6771437b4fe86515c76563cbc37d0ff298972d3885ef1abaaff9abc9569  ./dist/vscode/package.json
 02a5046d76b86b32fd6499dfe27f26d3f9703fb4f6f62cc1b7cf67192b3afb33  ./dogfood.sh
 54e12efe0418995c02dad644ae7c03d3eff5e810db77aedabd7a23f0c635f6f0  ./package.json
 aaec2f5bc40fb5a4702bc3e9bf768411598d61ff4b08a2055dde6db6e6db23eb  ./packages/pypi/BUILD.md

@@ -2,7 +2,7 @@
   "name": "oham-tsb",
   "displayName": "OHAM .tsb Tools",
   "description": "Inspect OHAM sealed media (.tsb): structure panel and exact frame preview, no codecs.",
-  "version": "0.2.0",
+  "version": "0.2.8",
   "publisher": "paul-phillips",
   "license": "SEE LICENSE IN LICENSE",
   "engines": { "vscode": "^1.85.0" },

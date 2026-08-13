@@ -1,0 +1,45 @@
+# Attach repo-staged artifacts to an existing release. Dispatch-only, same
+# tag-input pattern as release.yml (the sealed-session git proxy cannot push
+# tags, and assets built out-of-band — the VSIX, cross-platform binaries —
+# land in the tree first, then get attached here).
+name: upload-assets
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to attach assets to (e.g. v0.2.8)"
+        required: true
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: package + attach
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          assets=()
+          # every platform dir under bin/ becomes its own tarball (zip on windows)
+          for d in bin/*/; do
+            plat="$(basename "$d")"
+            [ "$plat" = "linux-x86_64" ] && continue   # already on the release
+            if [ -f "$d/oham" ] || [ -f "$d/oham.exe" ]; then
+              tar -C "$d" -czf "oham-${TAG}-${plat}.tar.gz" .
+              assets+=("oham-${TAG}-${plat}.tar.gz")
+            fi
+          done
+          # the VS Code extension, if staged
+          for v in dist/vscode/*.vsix; do
+            [ -f "$v" ] && assets+=("$v")
+          done
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "nothing staged to upload"; exit 1
+          fi
+          sha256sum "${assets[@]}" > "ASSET_SHA256SUMS.${TAG}.txt"
+          gh release upload "$TAG" "${assets[@]}" "ASSET_SHA256SUMS.${TAG}.txt" --clobber
+          gh release view "$TAG" --json assets -q '.assets[].name'

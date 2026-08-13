@@ -1,0 +1,24 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.gen-rl-millz/oham",
+  "description": "OHAM sealed media (.tsb) as agent tools: inspect structure, unseal exact frames and windows, verify the evd integrity lane, repack wire forms, excerpt stills. Exact integer decode, no codecs; corruption checksum, not cryptography.",
+  "status": "active",
+  "repository": {
+    "url": "https://github.com/gen-rl-millz/oham",
+    "source": "github"
+  },
+  "version_detail": {
+    "version": "0.2.8"
+  },
+  "packages": [
+    {
+      "registry_name": "npm",
+      "name": "oham-mcp",
+      "version": "0.2.8",
+      "runtime_hint": "npx",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

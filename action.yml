@@ -1,0 +1,78 @@
+# OHAM Verify — sealed-media verification as a CI step.
+#
+# Runs `oham verify` (structural conformance V1..V6 + the evd integrity lane
+# V7 when the container carries it) against one file or a glob, and fails the
+# job on any RED. `require-evd` additionally refuses containers that do not
+# carry the per-record integrity lane (add it with `oham repack IN OUT --evd`).
+# The evd lane is a corruption checksum, not cryptography: no keys, no
+# authentication claim.
+name: "OHAM Verify"
+description: "Verify OHAM sealed media (.tsb): structural conformance plus the evd per-record integrity lane. Corruption checksum, not cryptography."
+author: "Paul Phillips — Involved Involutions"
+branding:
+  icon: "check-circle"
+  color: "green"
+
+inputs:
+  path:
+    description: "A .tsb file or a shell glob of them (e.g. media/*.tsb)"
+    required: true
+  jobs:
+    description: "Parallel record-sweep jobs for the V7 leg (0 = one per CPU)"
+    required: false
+    default: "0"
+  require-evd:
+    description: "Fail any container that lacks the evd integrity lane"
+    required: false
+    default: "false"
+  release:
+    description: "Release tag whose prebuilt CLI to use"
+    required: false
+    default: "v0.2.8"
+
+runs:
+  using: "composite"
+  steps:
+    - name: fetch the pinned CLI
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        work="$(mktemp -d)"
+        echo "OHAM_WORK=$work" >> "$GITHUB_ENV"
+        gh release download "${{ inputs.release }}" -R gen-rl-millz/oham \
+          -p "*linux-x86_64.tar.gz" -D "$work"
+        tar -C "$work" -xzf "$work"/*linux-x86_64.tar.gz
+        (cd "$work" && sha256sum -c SHA256SUMS)
+        chmod +x "$work/oham"
+        "$work/oham" --version
+
+    - name: verify
+      shell: bash
+      run: |
+        set -uo pipefail
+        shopt -s nullglob
+        files=( ${{ inputs.path }} )
+        if [ "${#files[@]}" -eq 0 ]; then
+          echo "::error::no files match '${{ inputs.path }}'"
+          exit 1
+        fi
+        fail=0
+        for f in "${files[@]}"; do
+          echo "### oham verify $f" >> "$GITHUB_STEP_SUMMARY"
+          out="$("$OHAM_WORK/oham" verify "$f" --json --jobs "${{ inputs.jobs }}")" \
+            && ok=1 || ok=0
+          { echo '```json'; echo "$out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ok" -ne 1 ]; then
+            echo "::error file=$f::OHAM_VERIFY_RED"
+            fail=1
+          fi
+          if [ "${{ inputs.require-evd }}" = "true" ]; then
+            if ! "$OHAM_WORK/oham" info "$f" --json | grep -Eq '"integrity_lane": *"?true"?'; then
+              echo "::error file=$f::evd integrity lane required but absent — add it with: oham repack IN OUT --evd"
+              fail=1
+            fi
+          fi
+        done
+        exit "$fail"
