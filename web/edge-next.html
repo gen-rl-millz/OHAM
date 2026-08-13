@@ -7,7 +7,7 @@
      everything a frame is derives from its address set, so an edge device
      needs exactly this and nothing else — fetch the addresses for the frame
      in hand, derive the pixels through the wasm core (the same integer law
-     labs/tsb_live_v1/microdecode.py holds byte-exact at 6 ops/pixel), put
+     the reference microdecode holds byte-exact at 6 ops/pixel), put
      them on screen, and let them go. No GPU is asked for anything: no WebGL,
      no ImageBitmap, no filters — one putImageData per shown frame, CSS does
      the fitting. Decoded frames: the current one plus a small bounded
@@ -23,7 +23,7 @@
      field. Adaptivity is the cadence governor: even stride from measured
      capacity, skip-don't-wait, LOCK=6 resync — panel sharpness is never
      traded away.  -->
-<meta name="evs-base" content="https://storage.googleapis.com/framecore-etch-video/driving60q2z.tsb"><meta name="evs-mirrors" content="https://gen-rl-millz-tsb-video-20260805.static.hf.space/driving60q2z.tsb,https://framecore-etch-video.storage.googleapis.com/driving60q2z.tsb"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>OHAM edge — CPU-only glyph receiver</title>
 <style>
  html,body{margin:0;height:100%;background:#07070a;color:#cdd3df;
@@ -58,7 +58,7 @@
     const b = await r.arrayBuffer();
     return b.byteLength === len ? b : b.slice(off, off + len);
   };
-  const pre = new DataView(await range(0, 88));
+  const pre = new DataView(await range(0, 104));
   const magic = String.fromCharCode(pre.getUint8(0),pre.getUint8(1),pre.getUint8(2),pre.getUint8(3));
   if (magic !== "TSB1") die(`not a .tsb (magic ${magic})`);
   const VER = pre.getUint32(4, true);
@@ -70,9 +70,15 @@
   const ZREC = VER === 2;
   const fpsN = pre.getUint32(8, true), fpsD = pre.getUint32(12, true);
   if (!fpsN || !fpsD) die(".tsb declares no frame rate — refused");
-  if (pre.getUint32(16, true) || pre.getUint32(20, true)) die("reserved fields nonzero — refused");
+  const FLAGS = pre.getUint32(16, true);
+  if (FLAGS & ~1) die("unknown flag bits — refused"); // bit 0 = the evd integrity lane (additive; decode ignores it)
+  if (pre.getUint32(20, true)) die("reserved field nonzero — refused");
   const sec = i => ({off:Number(pre.getBigUint64(24+16*i,true)), len:Number(pre.getBigUint64(32+16*i,true))});
-  const [sevh, sevi, sevu, sevs] = [0,1,2,3].map(sec);
+  const NSEC = (FLAGS & 1) ? 5 : 4;
+  const SECS = [...Array(NSEC).keys()].map(sec);
+  const [sevh, sevi, sevu, sevs] = SECS;
+  { let cur = 24 + 16 * NSEC;
+    for (const sc of SECS) { if (sc.off !== cur) die("sections do not tile — refused"); cur = sc.off + sc.len; } }
   const RATE = fpsN / fpsD;
 
   bar("fetching header + index");
@@ -84,7 +90,7 @@
   let units = null, evuRange = null;
   if (sevu.len && sevu.len <= (4 << 20)) units = await range(sevu.off, sevu.len);
   else if (sevu.len) evuRange = {off: sevu.off, len: sevu.len};
-  const wasm   = await (await fetch("oham.wasm?v=15dd925e01", {cache:"no-cache"})).arrayBuffer();
+  const wasm   = await (await fetch("oham.wasm?v=BUILDSTAMP", {cache:"no-cache"})).arrayBuffer();
 
   /* ── two workers, alternating — decode the next while the current shows ── */
   /* every core the host can spare: frames are independent by construction, so
@@ -92,7 +98,7 @@
   const POOL = Math.max(2, Math.min(8,
     +Q.get("pool") || Math.max(2, (navigator.hardwareConcurrency || 4) - 2)));
   const ask = (w, m, tr) => new Promise(r => { w.onmessage = e => r(e.data); w.postMessage(m, tr || []); });
-  const pool = Array.from({length: POOL}, () => new Worker("decoder.js?v=15dd925e01"));
+  const pool = Array.from({length: POOL}, () => new Worker("decoder.js?v=BUILDSTAMP"));
   let ready;
   for (let k = 0; k < POOL; k++) {
     ready = await ask(pool[k], {cmd:"init", id:k, n:POOL, wasm, header, index,
@@ -462,7 +468,7 @@
     /* the bands compose by sitting next to each other — one putImageData per
        band at its own row offset; no assembly buffer, no merge protocol */
     const W2 = e.bands[0].ww;
-    const H2 = Math.min(bh2 * (bs >> L), h >> L || bh2 * (bs >> L));
+    const H2 = bh2 * (bs >> L); // ladder law: grid x (edge>>L) — plain h>>L cropped 8 rows at L1
     if (cv.width !== W2 || cv.height !== H2) { cv.width = W2; cv.height = H2; }
     for (const b of e.bands)
       ctx.putImageData(new ImageData(new Uint8ClampedArray(b.rgba.buffer), b.ww, b.wh), 0, b.y);
@@ -473,7 +479,7 @@
     if (spawning || growStop || BANDS || pool.length >= 8) return;
     if (!rtEMA || !(netCap() > cpuCap() * 1.15)) return;  // grow only when cpu-bound
     spawning = true;
-    const wk = new Worker("decoder.js?v=15dd925e01");
+    const wk = new Worker("decoder.js?v=BUILDSTAMP");
     const r = await ask(wk, {cmd:"init", id:pool.length, n:pool.length + 1, wasm, header, index,
                              url:BASE, evsOff:sevs.off, evuRange, units, cache:4});
     if (r.ok) {

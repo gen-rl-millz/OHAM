@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head>
-<meta charset="utf-8"><meta name="evs-base" content="https://storage.googleapis.com/framecore-etch-video/chimera60v2.tsb"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- THE HEAD CANNOT KNOW THE CLIP, SO IT MUST NOT CLAIM TO.
      These two lines used to read "35 Megapixels On A Phone Connection" and
      "An 8192x4320 field ... 185 Mb/s ... 2.49 Mb/s" — figures typed in for a clip
@@ -187,14 +187,15 @@ kbd{font-family:var(--mo);font-size:9.5px;border:1px solid var(--line);border-ra
      running old code against a freshly deployed receiver, and the page looked
      unchanged after a deploy that had in fact changed. The stamp is substituted
      at publish time. -->
-<script type="module" src="player.js?v=9c2b670a51"></script>
+<script type="module" src="player.js?v=BUILDSTAMP"></script>
 <footer class="pane" id="receipts">
   <span>measured, not quoted &nbsp;·&nbsp;</span>
   <span>full field <b><span id="rFull">…</span></b> · one native window <b><span id="rWin">…</span></b> &nbsp;·&nbsp;</span>
   <span>opened with <b><span id="rOpen">…</span></b>, never downloaded &nbsp;·&nbsp;</span>
   <span>coarsest size = <b>half</b> the decode work, same inscription &nbsp;·&nbsp;</span>
   <span>receiver <b><span id="rWasm">…</span></b>, zero reference frames held &nbsp;·&nbsp;</span>
-  <span>any frame, cold, <b>same cost</b></span>
+  <span>any frame, cold, <b>same cost</b> &nbsp;·&nbsp;</span>
+  <span>the tool: <b>npm i -g oham-cli</b> — seal, verify, fetch from mirrors record-verified (the evd lane)</span>
 </footer>
 <style>
 #receipts{bottom:0;left:0;right:0;padding:7px 26px;font-family:var(--mo);font-size:10px;

@@ -247,7 +247,7 @@ async function ensureUnits(t, level, rgn) {
  * measurement that would settle it needs an h2 test origin this container cannot
  * offer the browser (Chromium's TLS cannot traverse the agent proxy).
  *
- * `labs/etch_video_stream_v1` §8 names this as "the obvious next step", and on
+ * `the stream-measurement lab` §8 names this as "the obvious next step", and on
  * this harness it is not. Kicking the next frame's units off before posting the
  * current one, then awaiting that promise on the next turn:
  *
@@ -267,7 +267,7 @@ async function ensureUnits(t, level, rgn) {
  * a lower-priority connection or a request the server can answer without a round
  * trip. Deleting it would lose the measurement that says so.
  *
- * `labs/etch_video_stream_v1` §8, after measuring the 22.5 ms/frame wire read:
+ * `the stream-measurement lab` §8, after measuring the 22.5 ms/frame wire read:
  * "Reading one frame ahead in a worker is the obvious next step and has not been
  * done." It still had not been. Measured here, a window spent 39 ms fetching
  * against 27 ms unpacking and 18 ms resolving — with the fetch ON THE CRITICAL

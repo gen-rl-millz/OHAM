@@ -193,7 +193,7 @@ const STAGE_NONE = new URLSearchParams(location.search).get("stage") === "none";
 
 /* `?paint=cpu` — CPU-pure presentation. The decode was never the GPU's: the
    workers' wasm core resolves every pixel in integer arithmetic (the same law
-   `labs/tsb_live_v1/microdecode.py` holds byte-exact at 6 int ops/pixel). What
+   the reference microdecode holds byte-exact at 6 int ops/pixel). What
    still rode the GPU pipeline was PRESENTATION: one `createImageBitmap` per
    window per frame — an external allocation with an explicit lifecycle — plus
    a 28px shadow blur per window per paint. On devices where that pipeline
@@ -269,21 +269,28 @@ function setWindowCost(bytesPerWindow, rate){
       const b = await r.arrayBuffer();
       return b.byteLength === len ? b : b.slice(off, off + len);   // Range-blind server
     };
-    const pre = new DataView(await rangeOf(0, 88));
+    /* The prelude is 88 B (flags==0, four sections) or 104 B (flags bit 0 =
+       the evd integrity lane: a fifth section of 8-byte per-record corruption
+       checksums, 2026-08-13). The lane is additive — decode ignores it — so a
+       reader that knows both forms opens every container the sealers emit.
+       Any OTHER flag bit still refuses: unknown bits are unknown laws. */
+    const pre = new DataView(await rangeOf(0, 104));
     const magic = String.fromCharCode(pre.getUint8(0), pre.getUint8(1),
                                       pre.getUint8(2), pre.getUint8(3));
     if (magic !== "TSB1") { say(`not a .tsb container (magic ${magic})`); return; }
     if (pre.getUint32(4, true) !== 1) { say("unknown .tsb version"); return; }
     const fpsN = pre.getUint32(8, true), fpsD = pre.getUint32(12, true);
     if (!fpsN || !fpsD) { say(".tsb declares no frame rate — refused"); return; }
-    if (pre.getUint32(16, true) || pre.getUint32(20, true)) {
-      say(".tsb reserved fields nonzero — refused"); return;
-    }
+    const FLAGS = pre.getUint32(16, true);
+    if (FLAGS & ~1) { say(".tsb unknown flag bits — refused"); return; }
+    if (pre.getUint32(20, true)) { say(".tsb reserved field nonzero — refused"); return; }
+    const NSEC = (FLAGS & 1) ? 5 : 4;
     const sec = i => ({ off: Number(pre.getBigUint64(24 + 16 * i, true)),
                         len: Number(pre.getBigUint64(32 + 16 * i, true)) });
-    const [sevh, sevi, sevu, sevs] = [0, 1, 2, 3].map(sec);
-    let cursor = 88;
-    for (const sc of [sevh, sevi, sevu, sevs]) {
+    const SECS = [...Array(NSEC).keys()].map(sec);
+    const [sevh, sevi, sevu, sevs] = SECS;
+    let cursor = 24 + 16 * NSEC;
+    for (const sc of SECS) {
       if (sc.off !== cursor) { say(".tsb sections do not tile — refused"); return; }
       cursor = sc.off + sc.len;
     }

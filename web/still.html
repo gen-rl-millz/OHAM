@@ -51,13 +51,29 @@ const get = async (a, b) => {
   const buf = new Uint8Array(await r.arrayBuffer());
   return r.status === 206 ? buf : buf.subarray(a, b + 1);
 };
-const pre = await get(0, 87);
-const dv = new DataView(pre.buffer, pre.byteOffset, 88);
+/* The container law, stated rather than assumed: 88-byte prelude (flags==0,
+   four sections) or 104-byte (flags bit 0 = the evd integrity lane — one
+   8-byte corruption checksum per record). Any other flag bit refuses. This
+   page previously read the 88-byte shape only and opened lane containers by
+   accident; now it opens them by law and USES the lane. */
+const pre = await get(0, 103);
+const dv = new DataView(pre.buffer, pre.byteOffset, pre.length);
 if (String.fromCharCode(...pre.subarray(0, 4)) !== "TSB1") fail("not a .tsb");
 const ver = dv.getUint32(4, true);
+if (ver !== 1 && ver !== 2) fail("unknown .tsb version");
+const FLAGS = dv.getUint32(16, true);
+if (FLAGS & ~1) fail("unknown flag bits — refused");
+if (dv.getUint32(20, true)) fail("reserved field nonzero — refused");
+const NSEC = (FLAGS & 1) ? 5 : 4;
 const sec = i => ({ off: Number(dv.getBigUint64(24 + 16 * i, true)),
                     len: Number(dv.getBigUint64(32 + 16 * i, true)) });
-const [sevh, sevi, , sevs] = [0, 1, 2, 3].map(sec);
+const SECS = [...Array(NSEC).keys()].map(sec);
+let cursor = 24 + 16 * NSEC;
+for (const sc of SECS) {
+  if (sc.off !== cursor) fail("sections do not tile — refused");
+  cursor = sc.off + sc.len;
+}
+const [sevh, sevi, , sevs] = SECS, sevd = NSEC === 5 ? SECS[4] : null;
 const evh = await get(sevh.off, sevh.off + sevh.len - 1);
 const ie = await get(sevi.off + TICK * 12, sevi.off + TICK * 12 + 11);
 const idv = new DataView(ie.buffer, ie.byteOffset, 12);
@@ -68,6 +84,21 @@ if (ver === 2) {
   rec = new Uint8Array(await new Response(
     new Blob([rec]).stream().pipeThrough(ds)).arrayBuffer());
 }
+/* THE LANE, MADE VISIBLE. The digest covers the record's RAW (v1-form)
+   bytes — exactly what `rec` holds after the inflate above — so one
+   SubtleCrypto hash verifies this view's record against the container's own
+   checksum. Corruption detection, not cryptography: no keys, no
+   authentication claim. A mismatch REFUSES the render and names the record,
+   the same law `oham unseal` applies. */
+let integrity = "";
+if (sevd) {
+  const want = await get(sevd.off + TICK * 8, sevd.off + TICK * 8 + 7);
+  const got = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", rec)).subarray(0, 8);
+  const okDigest = want.every((b, i) => b === got[i]);
+  if (!okDigest) fail(`CORRUPT_RECORD: record ${TICK} fails its stored checksum`);
+  integrity = ` · <span title="corruption checksum, not cryptography">integrity evd ✓</span>`;
+}
 const hp = E.evs_reserve(evh.length); mem().set(evh, hp);
 if (!E.evs_open(hp, evh.length)) fail("receiver rejected the header");
 const rp = E.evs_reserve_frame(rec.length); mem().set(rec, rp);
@@ -76,18 +107,43 @@ if (!E.evs_push_frame(TICK, rp, rec.length)) fail("receiver rejected the record"
 const W = E.evs_w(), H = E.evs_h(), BLOCK = E.evs_block(), LEVELS = E.evs_levels();
 const recBytes = rlen;
 
-// ---- view state: center (native px) + integer rung; render = one window read
-let level = Math.min(LEVELS - 1, +Q.get("level") || (LEVELS - 1));
+/* THE LADDER LAW for a rung's true size: the grid never renumbers, so
+   L = ceil(W/BLOCK) x ceil(H/BLOCK) blocks of edge BLOCK>>L — 4096x2160 at
+   L1 is 2048x1088, never the plain-halved 1080. Labels and windows both
+   come from here so a hand-typed size cannot drift. */
+const GW = Math.ceil(W / BLOCK), GH = Math.ceil(H / BLOCK);
+const rungW = l => GW * Math.max(1, BLOCK >> l);
+const rungH = l => GH * Math.max(1, BLOCK >> l);
+
+/* THE RUNG FOLLOWS THE VIEWPORT (fit), never defaults to the deepest — the
+   recorded presentation defect was a 4096x2160 still opening as 128x67 in a
+   1440x1000 viewport. Fit = the deepest rung that still covers the viewport
+   in both axes (fewest addresses that fill the screen); a still smaller than
+   the viewport opens native and is scaled UP to fill. ?level= still pins. */
+function fitLevel() {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const vw = innerWidth * dpr, vh = innerHeight * dpr;
+  let l = 0;
+  while (l + 1 < LEVELS && rungW(l + 1) >= vw && rungH(l + 1) >= vh) l++;
+  return l;
+}
+let level = Q.get("level") !== null
+  ? Math.max(0, Math.min(LEVELS - 1, +Q.get("level")))
+  : fitLevel();
 let cx = W / 2, cy = H / 2;
 let lastAddrs = 0, lastWin = "";
 
 function render() {
   const dpr = Math.min(devicePixelRatio || 1, 2);
   cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
-  const lw = W >> level, lh = H >> level;          // image size at this rung
+  const lw = rungW(level), lh = rungH(level);      // ladder size at this rung
   const bs = Math.max(1, BLOCK >> level);
-  // desired pixel window at this rung, centered on (cx,cy)
-  const vw = Math.min(cv.width, lw), vh = Math.min(cv.height, lh);
+  /* the view SCALES to fill: the window read covers the viewport's extent in
+     rung pixels (never more than the rung has), then draws scaled so the
+     picture fills the screen instead of sitting as a thumbnail */
+  const scale = Math.max(1, Math.min(cv.width / lw, cv.height / lh));
+  const vw = Math.min(Math.ceil(cv.width / scale), lw);
+  const vh = Math.min(Math.ceil(cv.height / scale), lh);
   let x0 = Math.round((cx / W) * lw - vw / 2), y0 = Math.round((cy / H) * lh - vh / 2);
   x0 = Math.max(0, Math.min(lw - vw, x0)); y0 = Math.max(0, Math.min(lh - vh, y0));
   const x1 = Math.min(lw, x0 + vw), y1 = Math.min(lh, y0 + vh);
@@ -98,16 +154,24 @@ function render() {
   const ww = E.evs_win_w(), wh = E.evs_win_h();
   const img = new ImageData(
     new Uint8ClampedArray(E.memory.buffer, p, ww * wh * 4).slice(), ww, wh);
-  cx2d.imageSmoothingEnabled = false;
+  /* 1:1 and downscale draw exact pixels; an UPSCALE interpolates (smooth) —
+     nearest-neighbour above 1x reads as blockiness the data does not have.
+     ?pixels=1 keeps the hard-pixel look for inspection. */
+  cx2d.imageSmoothingEnabled = scale > 1 && Q.get("pixels") !== "1";
+  cx2d.imageSmoothingQuality = "high";
   cx2d.fillStyle = "#000"; cx2d.fillRect(0, 0, cv.width, cv.height);
   // place the block-aligned window so the requested x0,y0 sits at the origin
   createImageBitmap(img).then(bm => {
+    cx2d.setTransform(scale, 0, 0, scale, 0, 0);
     cx2d.drawImage(bm, bx0 * bs - x0, by0 * bs - y0);
+    cx2d.setTransform(1, 0, 0, 1, 0, 0);
     lastWin = `${x1 - x0}x${y1 - y0}`;
     bar.innerHTML =
       `<b>OHAM still</b> · ${W}x${H} native sealed in ${recBytes.toLocaleString()} B` +
       ` · rung L${level} (${lw}x${lh})` +
+      (scale > 1 ? ` · shown x${scale.toFixed(2)}` : "") +
       ` · window ${lastWin} · <b id="addr">${lastAddrs}</b> addresses this view` +
+      integrity +
       ` · you never downloaded the image` +
       ` · <b>Paul Phillips</b> · OrthoHolonic Accessible Memory`;
   });
@@ -130,7 +194,11 @@ cv.addEventListener("wheel", e => {
   e.preventDefault(); setLevel(level + (e.deltaY > 0 ? 1 : -1)); }, { passive: false });
 document.getElementById("zi").onclick = () => setLevel(level - 1);
 document.getElementById("zo").onclick = () => setLevel(level + 1);
-addEventListener("resize", render);
+// a resize re-fits the rung unless ?level= pinned it explicitly
+addEventListener("resize", () => {
+  if (Q.get("level") === null) level = fitLevel();
+  render();
+});
 render();
 window.__still = { get addrs() { return lastAddrs; }, get level() { return level; },
                    W, H };

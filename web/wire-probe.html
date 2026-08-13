@@ -48,10 +48,16 @@
 
   // the record index, from the primary — real records, not synthetic ranges
   st("reading index…");
+  // 88-byte prelude (flags==0) or 104-byte (flags bit 0 = the evd integrity
+  // lane). This probe used to read only the 88 shape and open lane containers
+  // by accident; now it opens them by law and NAMES the lane in its report.
   const pre = new DataView(await (await fetch(ORIGINS[0][1],
-    { headers: { Range: "bytes=0-87" }, cache: "no-store" })).arrayBuffer());
+    { headers: { Range: "bytes=0-103" }, cache: "no-store" })).arrayBuffer());
   if (String.fromCharCode(pre.getUint8(0), pre.getUint8(1), pre.getUint8(2), pre.getUint8(3)) !== "TSB1")
     { st("✕ bad container"); return; }
+  const FLAGS = pre.getUint32(16, true);
+  if (FLAGS & ~1) { st("✕ unknown flag bits"); return; }
+  const HAS_EVD = !!(FLAGS & 1);
   const sec = i => ({ off: Number(pre.getBigUint64(24 + 16 * i, true)),
                       len: Number(pre.getBigUint64(32 + 16 * i, true)) });
   const sevi = sec(1), sevs = sec(3);
@@ -91,7 +97,7 @@
     const f = row.insertCell(); f.textContent = fails;
     f.className = fails ? "bad" : "ok";
   }
-  st("done — screenshot this table");
+  st(`done — screenshot this table${HAS_EVD ? " · container carries the evd integrity lane" : ""}`);
   document.getElementById("dev").textContent =
     `device: ${navigator.hardwareConcurrency || "?"} cores · dpr ${devicePixelRatio} · ${new Date().toISOString()} · ${navigator.userAgent.slice(0, 80)}`;
 })();

@@ -5,8 +5,9 @@
  *   <oham-stream clip="https://…/my.tsb"></oham-stream>  your own sealed clip
  *
  * The element deliberately does NOT reimplement the player. It parameterizes
- * the PROVEN, FROZEN receiver page (the same bytes the owner verified at
- * 60 fps on-device) through its existing query surface (?src ?mirror ?level
+ * the PROVEN, FROZEN receiver page (the same bytes the owner's pinned
+ * on-device run verified at 60 fps; each device shows its own measured
+ * rate in the status bar) through its existing query surface (?src ?mirror ?level
  * ?bank …) inside an iframe. One implementation, already gated, already
  * deployed; the element is pure embedding — it cannot drift from the demo
  * because it IS the demo. A standalone (in-element pipeline) mode ships with
