@@ -1,7 +1,7 @@
 {
   "name": "oham-mcp",
-  "version": "0.2.8",
-  "description": "OHAM as a native tool for any MCP agent (Claude, Cursor, ...): check the install, inspect, decode frames/windows to images, excerpt stills, convert wire forms, and serve \u2014 over the sealed .tsb format. No SDK; the CLI binary rides in as one dependency.",
+  "version": "0.2.9",
+  "description": "OHAM as a native tool for any MCP agent (Claude, Cursor, ...): check the install, inspect, decode frames/windows to images, excerpt stills, convert wire forms, and serve — over the sealed .tsb format. No SDK; the CLI binary rides in as one dependency.",
   "type": "module",
   "bin": {
     "oham-mcp": "server.mjs"
@@ -22,10 +22,10 @@
     "video",
     "agent-tools"
   ],
-  "author": "Paul Phillips (https://involvedinvolutions.com)",
+  "author": "Paul Phillips — Involved Involutions (https://involvedinvolutions.com)",
   "license": "SEE LICENSE IN LICENSE",
   "homepage": "https://involvedinvolutions.com",
   "dependencies": {
-    "oham-cli": "0.2.7"
+    "oham-cli": "0.2.9"
   }
 }

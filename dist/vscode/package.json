@@ -5,27 +5,50 @@
   "version": "0.2.8",
   "publisher": "paul-phillips",
   "license": "SEE LICENSE IN LICENSE",
-  "engines": { "vscode": "^1.85.0" },
-  "categories": ["Visualization"],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization"
+  ],
   "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
     "commands": [
-      { "command": "oham.info", "title": "OHAM: Inspect .tsb" },
-      { "command": "oham.preview", "title": "OHAM: Preview Frame" }
+      {
+        "command": "oham.info",
+        "title": "OHAM: Inspect .tsb"
+      },
+      {
+        "command": "oham.preview",
+        "title": "OHAM: Preview Frame"
+      }
     ],
     "menus": {
       "explorer/context": [
-        { "command": "oham.info", "when": "resourceExtname == .tsb" },
-        { "command": "oham.preview", "when": "resourceExtname == .tsb" }
+        {
+          "command": "oham.info",
+          "when": "resourceExtname == .tsb"
+        },
+        {
+          "command": "oham.preview",
+          "when": "resourceExtname == .tsb"
+        }
       ]
     },
     "configuration": {
       "properties": {
-        "oham.binaryPath": { "type": "string", "default": "oham",
-          "description": "Path to the oham binary (repo: bin/linux-x86_64/oham)" }
+        "oham.binaryPath": {
+          "type": "string",
+          "default": "oham",
+          "description": "Path to the oham binary (repo: bin/linux-x86_64/oham)"
+        }
       }
     }
   },
-  "repository": { "type": "git", "url": "https://github.com/gen-rl-millz/oham" }
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gen-rl-millz/oham"
+  },
+  "author": "Paul Phillips \u2014 Involved Involutions"
 }

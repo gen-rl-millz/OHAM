@@ -1,7 +1,7 @@
 {
   "name": "oham-cli",
-  "version": "0.2.7",
-  "description": "OHAM \u2014 OrthoHolonic Accessible Memory. The `oham` command line: inspect, decode any frame/window, excerpt stills, convert wire forms, and range-serve sealed .tsb containers. Exact integer decode, entirely local \u2014 no service, no GPU, no codec.",
+  "version": "0.2.9",
+  "description": "OHAM — OrthoHolonic Accessible Memory. The `oham` command line: inspect, decode any frame/window, excerpt stills, convert wire forms, and range-serve sealed .tsb containers. Exact integer decode, entirely local — no service, no GPU, no codec.",
   "bin": {
     "oham": "bin/oham"
   },
@@ -15,7 +15,7 @@
     "NOTICE"
   ],
   "optionalDependencies": {
-    "oham-cli-linux-x64": "0.2.7"
+    "oham-cli-linux-x64": "0.2.9"
   },
   "engines": {
     "node": ">=16"
@@ -31,7 +31,7 @@
     "hadamard",
     "exact-decode"
   ],
-  "author": "Paul Phillips (https://involvedinvolutions.com)",
+  "author": "Paul Phillips — Involved Involutions (https://involvedinvolutions.com)",
   "license": "SEE LICENSE IN LICENSE",
   "homepage": "https://involvedinvolutions.com"
 }
