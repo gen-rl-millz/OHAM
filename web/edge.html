@@ -56,37 +56,35 @@
     const b = await r.arrayBuffer();
     return b.byteLength === len ? b : b.slice(off, off + len);
   };
-  /* 88-byte prelude (flags==0, four sections) or 104-byte (flags bit 0 = the
-     evd integrity lane, one 8-byte per-record corruption checksum — additive;
-     decode ignores it). Any other flag bit refuses: unknown bits are unknown
-     laws. */
-  const pre = new DataView(await range(0, 104));
-  const magic = String.fromCharCode(pre.getUint8(0),pre.getUint8(1),pre.getUint8(2),pre.getUint8(3));
-  if (magic !== "TSB1") die(`not a .tsb (magic ${magic})`);
-  const VER = pre.getUint32(4, true);
-  if (VER !== 1 && VER !== 2) die("unknown .tsb version");
-  /* v2 = records raw-deflated ON THE WIRE (54.6% measured on this clip).
-     The inscription is untouched: workers inflate byte-exact (gate Z1)
-     before the receiver indexes a single unit — every downstream law sees
-     identical bytes. The wire simply stops carrying entropy it can shed. */
-  const ZREC = VER === 2;
-  const fpsN = pre.getUint32(8, true), fpsD = pre.getUint32(12, true);
-  if (!fpsN || !fpsD) die(".tsb declares no frame rate — refused");
-  const FLAGS = pre.getUint32(16, true);
-  if (FLAGS & ~1) die("unknown flag bits — refused");
-  if (pre.getUint32(20, true)) die("reserved field nonzero — refused");
-  const NSEC = (FLAGS & 1) ? 5 : 4;
-  const sec = i => ({off:Number(pre.getBigUint64(24+16*i,true)), len:Number(pre.getBigUint64(32+16*i,true))});
-  const SECS = [...Array(NSEC).keys()].map(sec);
-  const [sevh, sevi, sevu, sevs] = SECS;
-  { // the sections must tile from the prelude's own end — refuse a gapped file
-    let cur = 24 + 16 * NSEC;
-    for (const sc of SECS) {
-      if (sc.off !== cur) die("sections do not tile — refused");
-      cur = sc.off + sc.len;
-    }
+  /* THE CONTAINER LAW HAS ONE HOME (2026-08-14): the shared receiver's tsb
+     module. This page carried its own JS prelude parser — one of three copies
+     of the same law in the tree, and the recorded W-recut defect (faces
+     hardcoding the 88-byte shape while the CLI emitted the 104/5 evd form)
+     is what triplicated law produces. The wasm is fetched first and parses
+     the head; this page only reads the results. v2 = records raw-deflated
+     ON THE WIRE (54.6% measured on this clip); workers inflate byte-exact
+     (gate Z1) before the receiver indexes a single unit. */
+  const wasm = await (await fetch("oham.wasm?v=BUILDSTAMP", {cache:"no-cache"})).arrayBuffer();
+  const { instance: TSBI } = await WebAssembly.instantiate(wasm, {});
+  const T = TSBI.exports;
+  {
+    const head = new Uint8Array(await range(0, 104));
+    const hp = T.tsb_reserve(head.length);
+    new Uint8Array(T.memory.buffer).set(head, hp);
+    if (!T.tsb_open(head.length, 0, 0))
+      die("the container head failed the .tsb law — refused (shared-receiver tsb_open)");
   }
+  const VER = T.tsb_version();
+  const ZREC = VER === 2;
+  const fpsN = T.tsb_fps_num(), fpsD = T.tsb_fps_den();
+  const NSEC = T.tsb_sections();
+  const sec = i => ({off: T.tsb_sec_off_lo(i) + T.tsb_sec_off_hi(i) * 2 ** 32,
+                     len: T.tsb_sec_len_lo(i) + T.tsb_sec_len_hi(i) * 2 ** 32});
+  const [sevh, sevi, sevu, sevs] = [sec(0), sec(1), sec(2), sec(3)];
   const RATE = fpsN / fpsD;
+  /* the bar prints the fps RATIONAL when it is below one — `rate 0fps` for a
+     1:3 camera cadence was the recorded cosmetic TRACE from the forms round */
+  const RATE_LABEL = RATE < 1 ? `${fpsN}:${fpsD}` : `${RATE.toFixed(0)}fps`;
 
   bar("fetching header + index");
   const header = await range(sevh.off, sevh.len);
@@ -97,7 +95,6 @@
   let units = null, evuRange = null;
   if (sevu.len && sevu.len <= (4 << 20)) units = await range(sevu.off, sevu.len);
   else if (sevu.len) evuRange = {off: sevu.off, len: sevu.len};
-  const wasm   = await (await fetch("oham.wasm?v=BUILDSTAMP", {cache:"no-cache"})).arrayBuffer();
 
   /* ── two workers, alternating — decode the next while the current shows ── */
   /* every core the host can spare: frames are independent by construction, so
@@ -531,7 +528,7 @@
         + ` · wire ${(netB/1048576/s).toFixed(1)} MB/s · ${decN ? (decMs/decN).toFixed(0) : "–"} ms/frame`
         + ` · stride ${stride} · buf ${buf.size}/${HOLD} · bank ${BANDS ? jobs.length : readyN}/${ORBIT}${BANDS ? ` · bands ${NB}` : ""}`
         + ` · field ${w}×${h} · manifest ${cv.width}×${cv.height}${L?` (panel-exact, G7 rung ${L})`:` (native)`}`
-        + ` · tick ${shownTick < 0 ? "–" : shownTick} · orbit ${shownTick < 0 ? "–" : ((shownTick % 240) + 240) % 240}/240 · rate ${RATE.toFixed(0)}fps · pool ${pool.length}${MIRRORS.length > 1 ? ` · org ${MIRRORS.filter((_, i) => i === 0 || mFail[i] < 3).length}/${MIRRORS.length}` : ""} · CPU integers only${ZREC ? " · z-wire" : ""}`);
+        + ` · tick ${shownTick < 0 ? "–" : shownTick} · orbit ${shownTick < 0 ? "–" : ((shownTick % 240) + 240) % 240}/240 · rate ${RATE_LABEL} · pool ${pool.length}${MIRRORS.length > 1 ? ` · org ${MIRRORS.filter((_, i) => i === 0 || mFail[i] < 3).length}/${MIRRORS.length}` : ""} · CPU integers only${ZREC ? " · z-wire" : ""}`);
       fpsT = now; fpsN2 = 0; decN = 0; decMs = 0; netB = 0; lastSkip = skipped;
     }
     requestAnimationFrame(loop);

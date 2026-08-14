@@ -286,6 +286,196 @@ const TOOLS = [
       return text(`serving ${a.root} at http://127.0.0.1:${port}/ (ranges + CORS)`);
     },
   },
+  {
+    name: "oham_export",
+    description:
+      "Translate a sealed container BACK to legacy media, chosen by the output extension: .png poster (EXACT), a directory of png frames (EXACT), .wav from an audiopcm .tsb2 object (EXACT — byte-identical to the stored payload, digest-gated), .mp4/.gif through a DISCOVERED external encoder ($OHAM_FFMPEG, then PATH). The lossy legs NAME the re-encode in the receipt (EXACT_FRAMES_TO_LOSSY_LEGACY_ENCODER + the encoder version) — never silent; an absent encoder is a typed refusal that says what to install. Read-side only: sealing stays the service's.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        input: { type: "string", description: "a .tsb container, or a .tsb2 audiopcm object for wav" },
+        output: { type: "string", description: "out.png | frames_dir/ | out.wav | out.mp4 | out.gif" },
+        tick: { type: "string", description: "one tick ('300') or a range ('0..120'); default: poster tick 0, moving = all" },
+        level: { type: "integer", minimum: 0, default: 0, description: "the rung to decode (0 = native)" },
+        fps: { type: "string", description: "override the output frame rate, e.g. '30:1' (default: the container's own)" },
+        force: { type: "boolean", description: "overwrite an existing output" },
+      },
+      required: ["input", "output"], additionalProperties: false,
+    },
+    handler: async (a) => {
+      const args = ["export", a.input, a.output, "--json"];
+      if (a.tick) args.push("--tick", a.tick);
+      if (a.level !== undefined) args.push("--level", String(a.level));
+      if (a.fps) args.push("--fps", a.fps);
+      if (a.force) args.push("--force");
+      const r = await run(args);
+      return r.ok ? text(r.out) : fail(r);
+    },
+  },
+  {
+    name: "oham_tape",
+    description:
+      "Make, read, or append lawful etch tapes: JSONL events packed as 8-byte etch words on the frozen layout [t:16|lane:4|word_id:20|tidx:15|leaf:8|rail:1]. action 'make' packs an input JSONL file (one {\"t\":N,\"lane\":N,\"word_id\":N,\"tidx\":N,\"leaf\":N,\"rail\":N} per line — t required, the rest default 0) into a tape; 'read' decodes a tape back to events (limit bounds the returned count); 'append' extends a tape staged+atomic. Out-of-range values refuse with the ROW and FIELD named. Store a tape typed with oham_object action 'store', domain 'etchtape'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["make", "read", "append"] },
+        input: { type: "string", description: "JSONL events file (make, append)" },
+        tape: { type: "string", description: "the tape file (read, append)" },
+        output: { type: "string", description: "the tape to write (make)" },
+        limit: { type: "integer", minimum: 1, description: "read: return at most this many events" },
+        force: { type: "boolean", description: "make: overwrite an existing output" },
+      },
+      required: ["action"], additionalProperties: false,
+    },
+    handler: async (a) => {
+      let args;
+      if (a.action === "make") {
+        if (!a.input || !a.output) return text("REFUSED: 'make' needs input (JSONL) and output (tape)");
+        args = ["tape", "make", a.input, a.output, ...(a.force ? ["--force"] : [])];
+      } else if (a.action === "read") {
+        if (!a.tape) return text("REFUSED: 'read' needs tape");
+        args = ["tape", "read", a.tape, ...(a.limit ? ["--limit", String(a.limit)] : [])];
+      } else {
+        if (!a.tape || !a.input) return text("REFUSED: 'append' needs tape and input (JSONL)");
+        args = ["tape", "append", a.tape, a.input];
+      }
+      const r = await run([...args, "--json"]);
+      return r.ok ? text(r.out) : fail(r);
+    },
+  },
+  {
+    name: "oham_object",
+    description:
+      "Exact typed TSB/2 objects — byte custody for ANY file (domains: blobfile, modelbin, textutf8, tablecsv, geojson, dnaascii, audiopcm, etchtape, ...). action 'store' seals a file as an exact typed object; 'inspect' reads the typed directory WITHOUT materializing the payload; 'verify' checks structure + the stored SHA-256 payload digest; 'restore' writes the exact payload back byte-identical (digest-gated); 'range' reads an exact byte range to a file; 'stream' reads one bounded chunk and returns the resume cursor (next_offset). Transport and restore are EXACT; no semantic decode happens here. Verification is a corruption checksum, not cryptography.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["store", "inspect", "verify", "restore", "range", "stream"] },
+        file: { type: "string", description: "store: the source file to seal" },
+        object: { type: "string", description: "the .tsb2 object (all actions but store)" },
+        output: { type: "string", description: "store: object path to write · restore/range/stream: payload output file" },
+        domain: { type: "string", description: "store: the typed domain (default blobfile); a mismatched payload REFUSES — e.g. etchtape takes only whole 8-byte events" },
+        offset: { type: "integer", minimum: 0, description: "range: byte offset · stream: resume cursor (default 0)" },
+        length: { type: "integer", minimum: 1, description: "range: byte count" },
+        chunk_size: { type: "integer", minimum: 0, description: "stream: bytes per chunk (0 = the safe 64 KiB default)" },
+        force: { type: "boolean", description: "overwrite an existing output" },
+      },
+      required: ["action"], additionalProperties: false,
+    },
+    handler: async (a) => {
+      const F = a.force ? ["--force"] : [];
+      let args;
+      if (a.action === "store") {
+        if (!a.file) return text("REFUSED: 'store' needs file");
+        args = ["object", "store", a.file, ...(a.output ? [a.output] : []),
+                ...(a.domain ? ["--domain", a.domain] : []), ...F];
+      } else if (!a.object) {
+        return text(`REFUSED: '${a.action}' needs object`);
+      } else if (a.action === "inspect" || a.action === "verify") {
+        args = ["object", a.action, a.object];
+      } else if (a.action === "restore") {
+        if (!a.output) return text("REFUSED: 'restore' needs output");
+        args = ["object", "restore", a.object, a.output, ...F];
+      } else if (a.action === "range") {
+        if (!a.output || a.offset === undefined || a.length === undefined)
+          return text("REFUSED: 'range' needs output, offset and length");
+        args = ["object", "range", a.object, a.output,
+                "--offset", String(a.offset), "--length", String(a.length), ...F];
+      } else {
+        if (!a.output) return text("REFUSED: 'stream' needs output");
+        args = ["object", "stream", a.object, a.output,
+                ...(a.chunk_size !== undefined ? ["--chunk-size", String(a.chunk_size)] : []),
+                ...(a.offset !== undefined ? ["--offset", String(a.offset)] : []), ...F];
+      }
+      const r = await run([...args, "--json"]);
+      return r.ok ? text(r.out) : fail(r);
+    },
+  },
+  {
+    name: "oham_bundle",
+    description:
+      "Typed multistream TSB/2 bundles with a dedicated integrity ledger. action 'create' packs streams given as 'DOMAIN=PATH' entries — stasis is the order-blind lane, flux the order-sensitive lane (the two rails, never conflated); 'append' atomically extends by rebuilding the directory and ledger; 'list' shows typed stream metadata WITHOUT materializing payloads; 'extract' writes one stream (index, or a unique domain); 'verify' checks the final LEDGER against every payload and aux section. Exact transport; the ledger is a corruption checksum, not cryptography.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["create", "append", "list", "extract", "verify"] },
+        bundle: { type: "string", description: "the bundle file (all actions but create)" },
+        output: { type: "string", description: "create: bundle to write · extract: stream output file" },
+        stasis: { type: "array", items: { type: "string" }, description: "'DOMAIN=PATH' entries for the order-blind lane" },
+        flux: { type: "array", items: { type: "string" }, description: "'DOMAIN=PATH' entries for the order-sensitive lane" },
+        index: { type: "integer", minimum: 0, description: "extract: stream index (default 0)" },
+        domain: { type: "string", description: "extract: select by unique domain instead of index" },
+        force: { type: "boolean", description: "overwrite an existing output" },
+      },
+      required: ["action"], additionalProperties: false,
+    },
+    handler: async (a) => {
+      const lanes = [
+        ...(a.stasis || []).flatMap((s) => ["--stasis", s]),
+        ...(a.flux || []).flatMap((s) => ["--flux", s]),
+      ];
+      const F = a.force ? ["--force"] : [];
+      let args;
+      if (a.action === "create") {
+        if (!a.output) return text("REFUSED: 'create' needs output");
+        if (!lanes.length) return text("REFUSED: 'create' needs at least one stasis or flux 'DOMAIN=PATH' entry");
+        args = ["bundle", "create", a.output, ...lanes, ...F];
+      } else if (!a.bundle) {
+        return text(`REFUSED: '${a.action}' needs bundle`);
+      } else if (a.action === "append") {
+        if (!lanes.length) return text("REFUSED: 'append' needs at least one stasis or flux 'DOMAIN=PATH' entry");
+        args = ["bundle", "append", a.bundle, ...lanes];
+      } else if (a.action === "extract") {
+        if (!a.output) return text("REFUSED: 'extract' needs output");
+        args = ["bundle", "extract", a.bundle, a.output,
+                ...(a.index !== undefined ? ["--index", String(a.index)] : []),
+                ...(a.domain ? ["--domain", a.domain] : []), ...F];
+      } else {
+        args = ["bundle", a.action, a.bundle];
+      }
+      const r = await run([...args, "--json"]);
+      return r.ok ? text(r.out) : fail(r);
+    },
+  },
+  {
+    name: "oham_transfer",
+    description:
+      "Verified, bounded network transfer of exact bytes. action 'pull' fetches a URL with strict HTTP ranges + resume and gates the result on a final SHA-256 you supply (sha256, or a trusted manifest file); 'fetch' is the container-aware verified fetch for an evd-carrying .tsb — records striped across the primary and every mirror, EACH record verified against its own stored digest as it lands, and a record that fails on one source is refetched from another with the bad source NAMED. Transport verification only: bytes against a digest / the container's own lane — it authenticates no one (corruption checksum, not cryptography).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["pull", "fetch"] },
+        url: { type: "string", description: "the primary source URL" },
+        output: { type: "string", description: "file to write" },
+        sha256: { type: "string", description: "pull: the expected final digest (hex)" },
+        manifest: { type: "string", description: "pull: a trusted local manifest file naming the digest" },
+        mirrors: { type: "array", items: { type: "string" }, description: "fetch: additional record sources" },
+        timeout_seconds: { type: "integer", minimum: 1 },
+        retries: { type: "integer", minimum: 0 },
+        force: { type: "boolean", description: "overwrite an existing output" },
+      },
+      required: ["action", "url", "output"], additionalProperties: false,
+    },
+    handler: async (a) => {
+      const common = [
+        ...(a.timeout_seconds ? ["--timeout-seconds", String(a.timeout_seconds)] : []),
+        ...(a.retries !== undefined ? ["--retries", String(a.retries)] : []),
+        ...(a.force ? ["--force"] : []),
+      ];
+      let args;
+      if (a.action === "pull") {
+        args = ["transfer", "pull", a.url, a.output,
+                ...(a.sha256 ? ["--sha256", a.sha256] : []),
+                ...(a.manifest ? ["--manifest", a.manifest] : []), ...common];
+      } else {
+        args = ["transfer", "fetch", a.url, a.output,
+                ...(a.mirrors || []).flatMap((m) => ["--mirror", m]), ...common];
+      }
+      const r = await run([...args, "--json"]);
+      return r.ok ? text(r.out) : fail(r);
+    },
+  },
 ];
 
 const text = (t) => ({ content: [{ type: "text", text: t }] });

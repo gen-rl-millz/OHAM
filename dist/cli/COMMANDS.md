@@ -236,7 +236,7 @@ Options:
           PROBE ONLY: read the y4m source's own geometry/rate/content and print the recipe the documented laws select (grid-law block, the tiles rule, the smooth-content dial) as one JSON document — nothing is sealed and no output is written. Guided selection, so the flags need never be known
 
       --mode <MODE>
-          the named form for --probe: auto (=standard) | performance | standard | quality — the vocabulary law: a mode is selected by name, never redefined at the point of use
+          the named form, for --probe AND --image: auto (=standard) | performance | standard | quality — the vocabulary law: a mode is selected by name, never redefined at the point of use. On the image path it rides the converter's own `mode` form field (`quality` = the inspected-still/gallery class); the service still calibrates block/tiles from the picture itself
           
           [default: auto]
 
@@ -318,6 +318,37 @@ Options:
           Print help (see a summary with '-h')
 ```
 
----
+### `oham export`
+```
+Export a container BACK to legacy media: png poster, png sequence, wav (audiopcm objects), mp4/gif via a DISCOVERED external encoder. The exact legs say EXACT; the lossy legs name the re-encode — never silent. Read-side only: sealing stays the service's
 
-*OHAM — OrthoHolonic Accessible Memory · Paul Phillips — solo developer · involvedinvolutions.com · Apache-2.0 + Commons Clause.*
+Usage: oham export [OPTIONS] <INPUT> <OUTPUT>
+
+Arguments:
+  <INPUT>   a .tsb container, or a .tsb2 audiopcm object for wav
+  <OUTPUT>  out.png | frames_dir/ | out.wav | out.mp4 | out.gif
+
+Options:
+      --tick <TICK>    one tick (`300`) or a range (`0..120`); default: poster tick 0, moving = all
+      --level <LEVEL>  the rung to decode (0 = native) [default: 0]
+      --fps <FPS>      override the output frame rate, e.g. 30:1 (default: the container's own)
+      --force          
+      --json           
+  -h, --help           Print help
+```
+
+### `oham tape`
+```
+Lawful etch tapes from JSONL events: make, read, append — the 8-byte event quantum, packed and unpacked by the frozen field layout
+
+Usage: oham tape <COMMAND>
+
+Commands:
+  make    Pack JSONL events into a tape of 8-byte etch words. Each line: {"t":N, "lane":N, "word_id":N, "tidx":N, "leaf":N, "rail":N} — `t` is required, the rest default to 0; out-of-range values refuse with the row and field named
+  read    Decode a tape back to events (one JSON document; `--limit` bounds it)
+  append  Append JSONL events to an existing tape (staged + atomic, the writer law)
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help  Print help
+```

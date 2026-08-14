@@ -51,29 +51,20 @@ const get = async (a, b) => {
   const buf = new Uint8Array(await r.arrayBuffer());
   return r.status === 206 ? buf : buf.subarray(a, b + 1);
 };
-/* The container law, stated rather than assumed: 88-byte prelude (flags==0,
-   four sections) or 104-byte (flags bit 0 = the evd integrity lane — one
-   8-byte corruption checksum per record). Any other flag bit refuses. This
-   page previously read the 88-byte shape only and opened lane containers by
-   accident; now it opens them by law and USES the lane. */
+/* THE CONTAINER LAW HAS ONE HOME (2026-08-14): the shared receiver's tsb
+   module. This page carried its own JS copy of the prelude law — the third
+   copy in the tree — and triplicated law is what once let the faces refuse
+   containers the CLI lawfully produced. The wasm now parses the head; this
+   page only reads the results. */
 const pre = await get(0, 103);
-const dv = new DataView(pre.buffer, pre.byteOffset, pre.length);
-if (String.fromCharCode(...pre.subarray(0, 4)) !== "TSB1") fail("not a .tsb");
-const ver = dv.getUint32(4, true);
-if (ver !== 1 && ver !== 2) fail("unknown .tsb version");
-const FLAGS = dv.getUint32(16, true);
-if (FLAGS & ~1) fail("unknown flag bits — refused");
-if (dv.getUint32(20, true)) fail("reserved field nonzero — refused");
-const NSEC = (FLAGS & 1) ? 5 : 4;
-const sec = i => ({ off: Number(dv.getBigUint64(24 + 16 * i, true)),
-                    len: Number(dv.getBigUint64(32 + 16 * i, true)) });
-const SECS = [...Array(NSEC).keys()].map(sec);
-let cursor = 24 + 16 * NSEC;
-for (const sc of SECS) {
-  if (sc.off !== cursor) fail("sections do not tile — refused");
-  cursor = sc.off + sc.len;
-}
-const [sevh, sevi, , sevs] = SECS, sevd = NSEC === 5 ? SECS[4] : null;
+const hp2 = E.tsb_reserve(pre.length); mem().set(pre, hp2);
+if (!E.tsb_open(pre.length, 0, 0))
+  fail("the container head failed the .tsb law — refused (shared-receiver tsb_open)");
+const ver = E.tsb_version();
+const NSEC = E.tsb_sections();
+const sec = i => ({ off: E.tsb_sec_off_lo(i) + E.tsb_sec_off_hi(i) * 2 ** 32,
+                    len: E.tsb_sec_len_lo(i) + E.tsb_sec_len_hi(i) * 2 ** 32 });
+const [sevh, sevi, sevs, sevd] = [sec(0), sec(1), sec(3), NSEC === 5 ? sec(4) : null];
 const evh = await get(sevh.off, sevh.off + sevh.len - 1);
 const ie = await get(sevi.off + TICK * 12, sevi.off + TICK * 12 + 11);
 const idv = new DataView(ie.buffer, ie.byteOffset, 12);
@@ -184,7 +175,12 @@ cv.addEventListener("pointerdown", e => {
 cv.addEventListener("pointermove", e => {
   if (!drag) return;
   const dpr = Math.min(devicePixelRatio || 1, 2);
-  const s = (W >> level) / W;                      // rung px per native px
+  /* rung px per native px — from the ladder law (rungW), never plain halving:
+     W>>level only agrees when W is a block multiple, and this page's own rule
+     is that every size comes from rungW/rungH so a hand-typed law cannot
+     drift. On a non-multiple width the halved value under-runs the grid and
+     the pan tracks slow. */
+  const s = rungW(level) / W;
   cx -= (e.clientX - drag.x) * dpr / s; cy -= (e.clientY - drag.y) * dpr / s;
   cx = Math.max(0, Math.min(W, cx)); cy = Math.max(0, Math.min(H, cy));
   drag = { x: e.clientX, y: e.clientY }; render(); });
