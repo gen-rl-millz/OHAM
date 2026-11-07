@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Holo-Toffoli Constellation Map | FrameCore Public Witness</title>
+<style>
+:root{color-scheme:dark;--bg:#0a0814;--panel:#151125;--panel2:#1c1631;--line:#3d3159;--tx:#f3eefc;--mut:#b9abc9;--violet:#c4a6ff;--cyan:#8ed7ed;--gold:#f4c982;--red:#ff9cae}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#22163c 0%,#0a0814 57%);color:var(--tx);font:15px/1.55 system-ui,Segoe UI,Arial,sans-serif}
+header,main,footer{max-width:1200px;margin:auto;padding:24px}header{padding-top:40px}
+a{color:var(--violet)}.brand{font:600 11px/1.5 ui-monospace,monospace;letter-spacing:.18em;color:var(--cyan);text-transform:uppercase}
+h1{font-size:clamp(30px,5vw,57px);line-height:1.05;letter-spacing:-.035em;margin:12px 0}h2{font-size:19px;margin:0 0 12px;color:var(--violet)}h3{font-size:14px;letter-spacing:.04em;color:var(--gold)}
+.lede{max-width:760px;font-size:17px;color:var(--mut)}.note{border-left:3px solid var(--gold);padding:12px 16px;background:#201b2e;color:#e8dceb;border-radius:4px;margin:20px 0}
+nav{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;font-size:13px}
+main{padding-top:2px}.layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px}.panel{background:linear-gradient(135deg,#171126,#120e21);border:1px solid var(--line);border-radius:14px;padding:22px;min-width:0;margin-bottom:16px}
+label{display:block;color:var(--mut);font-size:12px;margin:10px 0 6px;font-weight:650}select,textarea,button{font:inherit;color:var(--tx);background:#0d0b19;border:1px solid #57436f;border-radius:7px;padding:9px 12px}select{width:100%;max-width:320px}textarea{display:block;width:100%;min-height:90px;font:12px/1.6 ui-monospace,monospace;resize:vertical}
+button{background:#5e3a95;cursor:pointer;border:1px solid #9976c8;font-weight:700}button:hover{background:#7652a7}
+.mini{font:12px/1.6 ui-monospace,monospace;color:var(--mut)}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:18px 0}.stat{background:#251937;padding:11px;border:1px solid #423355;border-radius:8px}.stat b{font:700 22px ui-monospace,monospace;color:var(--cyan);display:block}.stat span{font-size:11px;color:var(--mut)}
+table{width:100%;border-collapse:collapse;font:13px ui-monospace,monospace}th,td{text-align:center;border-bottom:1px solid #3b3050;padding:7px}th{color:var(--mut);font-weight:500}tr.moved td{color:#f5c982}.mono{font-family:ui-monospace,Consolas,monospace;overflow-wrap:anywhere}
+.grid25{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;max-width:345px;margin:16px 0}.seat{aspect-ratio:1;display:grid;place-items:center;background:#251d35;border:1px solid #554767;border-radius:6px;font:13px ui-monospace,monospace}
+.seat.core{background:#473367;border-color:#9670ca}.seat.ring{background:#293b48;border-color:#507c8d}.line{border-top:1px solid var(--line);padding:12px 0;color:var(--mut)}
+.status{color:var(--cyan);font:13px ui-monospace,monospace}.error{color:var(--red)}.pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.pill{border:1px solid var(--line);border-radius:18px;padding:3px 10px;color:var(--mut);font-size:12px}
+footer{color:var(--mut);font-size:12px;border-top:1px solid var(--line)}@media(max-width:760px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}header,main,footer{padding:18px}.panel{padding:15px}}
+</style></head><body>
+<header>
+<div class="brand">FrameCore / independent public demonstration</div>
+<h1>Holo-Toffoli<br>Constellation Map</h1>
+<p class="lede">Follow a finite reversible gate word from its three-bit action into its exact permutation, inverse, cycle structure, and distinct observational records—without confusing a calculable finite-state action with an unperformed E8 or Leech lift.</p>
+<nav><a href="../IPI-Tafoli-Deno/">Reversible Witness</a><a href="../IPI-Reversible-Workbench/">Reversible Workbench</a><a href="../IPI-Reversible-Lab/">Demo index</a></nav>
+<div class="note"><strong>Public companion, not the private lab deployment.</strong> This independent page computes the eight-state gate action in your browser. FrameCore's original Holo-Toffoli Map additionally consumes sealed Rust-served E8, Leech, observer, and constellation records; none of those private data or modules are included here.</div>
+</header>
+<main>
+<div class="panel"><h2>Choose a gate word</h2><div class="layout"><div><label for="preset">Finite-state example</label><select id="preset"><option value="ccf">Toffoli CC_F</option><option value="half">Half-adder word</option><option value="majority">Majority</option><option value="parity">Parity</option><option value="fredkin">Controlled swap (Fredkin)</option><option value="braid">Composed word</option><option value="identity">Identity</option></select>
+<p class="mini">All supported primitive gates are involutions. The inverse of a word is its reverse sequence.</p></div>
+<div><label for="gates">Editable typed gate word (X, CX, CCX, SWAP, FREDKIN)</label><textarea id="gates" spellcheck="false"></textarea><p><button id="run">Evaluate exact action</button></p></div></div>
+<p id="message" class="status" role="status"></p></div>
+<div class="layout">
+<section><div class="panel"><h2>The exact 8-state action</h2><div id="stats" class="stats"></div><table><thead><tr><th>input</th><th>binary</th><th>output</th><th>binary</th></tr></thead><tbody id="table"></tbody></table><h3>Cycle decomposition</h3><p id="cycles" class="mono"></p><h3>Inverse witness</h3><p id="inverse" class="status"></p></div>
+<div class="panel"><h2>Same designation, distinct histories</h2><p>Appending <span class="mono">CC_F · CC_F</span> changes the gate word, not the resulting permutation. The final STASIS value agrees; FLUX histories remain distinct.</p><p id="history" class="mono"></p><p class="mini">LEDGER is a separately named custody register, not a third STASIS/FLUX rail. A public browser computation does not create a native FrameCore custody record.</p></div></section>
+<section><div class="panel"><h2>25-seat observer geometry</h2><p class="mini">Structural guide: 1 center + 8 inner seats + 16 outer seats. These seats are <strong>not</strong> assigned to a gate by this standalone page.</p><div id="seats" class="grid25"></div><div class="pills"><span class="pill">1 center</span><span class="pill">8 inner</span><span class="pill">16 outer</span></div></div>
+<div class="panel"><h2>Typed cross-grain boundary</h2><div class="line"><strong>Lips8 / finite word</strong><div class="status">Computed here: 8 input states, permutation and inverse</div></div>
+<div class="line"><strong>S8 relabeling</strong><div id="s8" class="status"></div></div>
+<div class="line"><strong>E8 / 240 roots</strong><div class="mini">Private served root action required. The public page does not infer a root permutation or claim a valid lift.</div></div>
+<div class="line"><strong>Leech / 720 pure-lift loci</strong><div class="mini">Private served locus and L1-letter data required. No invented Leech-address action.</div></div>
+<div class="line"><strong>Observer and moiré seats</strong><div class="mini">Seat actions require their typed owner. The documented conjugate/moiré weld is not assumed to exist.</div></div>
+</div></section>
+</div>
+</main><footer>Independent public explanatory computation · Paul Phillips / FrameCore · No private source, sealed research rows, or backend. The geometric figures shown as boundaries are references, not results generated on this page.</footer>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const G={
+ccf:[{gate:"CCX",c1:0,c2:1,target:2}],
+half:[{gate:"CCX",c1:0,c2:1,target:2},{gate:"CX",control:0,target:1}],
+majority:[{gate:"CX",control:2,target:1},{gate:"CX",control:2,target:0},{gate:"CCX",c1:0,c2:1,target:2}],
+parity:[{gate:"CX",control:0,target:2},{gate:"CX",control:1,target:2}],
+fredkin:[{gate:"FREDKIN",control:0,a:1,b:2}],
+braid:[{gate:"CX",control:0,target:1},{gate:"SWAP",a:1,b:2},{gate:"CCX",c1:0,c2:1,target:2},{gate:"CX",control:0,target:2}],
+identity:[]
+};
+const bit=(s,k)=>(s>>k)&1;
+function gate(g,s){
+const t=String(g.gate||"").toUpperCase();let w=[];
+if(t==="X") w=[g.target];
+else if(t==="CX") w=[g.control,g.target];
+else if(t==="CCX") w=[g.c1,g.c2,g.target];
+else if(t==="SWAP") w=[g.a,g.b];
+else if(t==="FREDKIN") w=[g.control,g.a,g.b];
+else throw Error("Unknown gate "+t);
+if(w.some(x=>!Number.isInteger(x)||x<0||x>2)||new Set(w).size!==w.length)throw Error("All wires must be distinct integers in {0,1,2}");
+if(t==="X")return s^(1<<g.target);
+if(t==="CX")return bit(s,g.control)?s^(1<<g.target):s;
+if(t==="CCX")return bit(s,g.c1)&&bit(s,g.c2)?s^(1<<g.target):s;
+if(t==="SWAP"||t==="FREDKIN"){
+ if(t==="FREDKIN"&&!bit(s,g.control))return s;
+ return bit(s,g.a)===bit(s,g.b)?s:s^((1<<g.a)|(1<<g.b));
+}
+}
+const run=(gates,x)=>gates.reduce((s,g)=>gate(g,s),x);
+const bits=x=>[2,1,0].map(k=>bit(x,k)).join("");
+const factorial=n=>n<=1?1:n*factorial(n-1);
+function lehmer(p){let rank=0;for(let i=0;i<8;i++){let smaller=0;for(let j=i+1;j<8;j++)if(p[j]<p[i])smaller++;rank+=smaller*factorial(7-i);}return rank;}
+function cycles(p){const used=new Set(),out=[];for(let i=0;i<8;i++){if(used.has(i))continue;let c=[],j=i;while(!used.has(j)){used.add(j);c.push(j);j=p[j];}out.push(c);}return out;}
+function gcd(a,b){while(b){const t=a%b;a=b;b=t;}return a;}
+function render(){
+try{
+const g=JSON.parse($("gates").value);
+if(!Array.isArray(g)||g.length>128)throw Error("Expected an array of at most 128 gates");
+const p=Array.from({length:8},(_,i)=>run(g,i));
+if(new Set(p).size!==8)throw Error("The gate word must act bijectively");
+const inv=g.slice().reverse();const checked=p.every((v,i)=>run(inv,v)===i);
+const cy=cycles(p),order=cy.reduce((a,c)=>a*c.length/gcd(a,c.length),1);
+let inversions=0;for(let i=0;i<8;i++)for(let j=i+1;j<8;j++)if(p[i]>p[j])inversions++;
+const moved=p.filter((x,i)=>x!==i).length,rank=lehmer(p);
+$("stats").innerHTML=[["Moved states",moved+"/8"],["Permutation order",order],["Parity",inversions%2?"odd":"even"],["S8 relabeling ID",rank],["Gate count",g.length],["Inverse check",checked?"8 / 8":"FAIL"]].map(k=>'<div class="stat"><b>'+k[1]+'</b><span>'+k[0]+'</span></div>').join("");
+$("table").innerHTML=p.map((v,i)=>'<tr class="'+(i===v?"":"moved")+'"><td>'+i+'</td><td>'+bits(i)+'</td><td>'+v+'</td><td>'+bits(v)+'</td></tr>').join("");
+$("cycles").textContent=cy.map(c=>"("+c.join(" ") + ")").join(" ");
+$("inverse").textContent=checked?"PASS: reversed involution word recovers every one of the 8 inputs.":"FAIL";
+const pair=[...g,{gate:"CCX",c1:0,c2:1,target:2},{gate:"CCX",c1:0,c2:1,target:2}];
+const same=p.every((v,i)=>run(pair,i)===v);
+$("history").textContent="STASIS: "+(same?"identical 8/8":"mismatch")+"\nFLUX A: "+g.length+" gates\nFLUX B: "+pair.length+" gates (distinct executable history)";
+$("s8").textContent="Exact rank "+rank+" of 0..40319 in lexicographic permutation order; not a separate observer coordinate.";
+$("message").textContent="PASS · exact finite action and inverse · local computation, not a Rust-server receipt";
+$("message").className="status";
+}catch(e){$("message").textContent="REFUSED: "+e.message;$("message").className="status error";}
+}
+$("seats").innerHTML=Array.from({length:25},(_,i)=>'<div class="seat '+(i===12?"core":([6,7,8,11,13,16,17,18].includes(i)?"ring":""))+'">'+i+'</div>').join("");
+$("preset").addEventListener("change",()=>{$("gates").value=JSON.stringify(G[$("preset").value],null,2);render();});
+$("run").addEventListener("click",render);
+$("gates").value=JSON.stringify(G.ccf,null,2);render();
+</script></body></html>
