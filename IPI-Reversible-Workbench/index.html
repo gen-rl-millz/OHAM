@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reversible Workbench | FrameCore Public Witness</title>
+<style>
+:root{color-scheme:dark;--bg:#0a0913;--panel:#171126;--line:#403457;--txt:#f3eefc;--mut:#bfb1cd;--purple:#c4a4fa;--teal:#8de2d3;--gold:#ffd594;--red:#ff9dad}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top right,#282048 0,#0a0913 62%);color:var(--txt);font:15px/1.55 system-ui,Arial,sans-serif}header,main,footer{max-width:1190px;margin:auto;padding:24px}
+header{padding-top:38px}.eyebrow{font:600 12px ui-monospace,monospace;color:var(--teal);letter-spacing:.16em;text-transform:uppercase}h1{font-size:clamp(34px,5vw,55px);line-height:1.08;margin:12px 0;letter-spacing:-.035em}h2{color:var(--purple);font-size:19px;margin:0 0 12px}h3{font-size:14px;color:var(--gold);margin-top:20px}.intro{max-width:780px;color:var(--mut);font-size:17px}
+a{color:var(--purple)}nav{display:flex;flex-wrap:wrap;gap:20px;font-size:13px;margin:20px 0}.notice{background:#24202e;border-left:3px solid var(--gold);padding:12px 16px;color:#eee2f3;margin:20px 0}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}.panel{background:linear-gradient(150deg,#19142a,#130f21);border:1px solid var(--line);border-radius:13px;padding:21px;margin:0 0 16px;min-width:0}
+label{font:600 12px system-ui;color:var(--mut);display:block;margin:10px 0 6px}
+select,textarea,button{background:#0c0a18;color:var(--txt);border:1px solid #605078;border-radius:7px;font:inherit;padding:10px}
+select{max-width:100%;width:280px}textarea{display:block;width:100%;height:118px;resize:vertical;font:12px/1.5 ui-monospace,monospace}button{background:#634097;border-color:#9874c7;cursor:pointer;font-weight:650}button:hover{background:#8253af}.secondary{background:#2d2547}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.bit{width:54px;background:#2a2342}.bit.on{background:#135b57;border-color:#5cdec9}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0}.stat{background:#251b3a;border-radius:8px;padding:12px;border:1px solid #3e3159}.stat strong{font:700 22px ui-monospace,monospace;display:block;color:var(--teal)}.stat span{font-size:11px;color:var(--mut)}
+table{border-collapse:collapse;width:100%;font:12px/1.3 ui-monospace,monospace;margin-top:10px}th,td{text-align:center;padding:9px 4px;border-bottom:1px solid var(--line)}th{color:var(--mut);font-weight:500}.ok{color:var(--teal)}.bad{color:var(--red)}.mono{font:12px/1.6 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.steps{border:1px solid var(--line);border-radius:7px;overflow:auto}.step{display:grid;grid-template-columns:28px 1fr 115px;gap:6px;border-bottom:1px solid #34294b;padding:8px 11px;font:12px ui-monospace,monospace}.step:last-child{border:0}.step b{color:var(--teal);font-weight:500}
+.status{color:var(--teal);font:13px ui-monospace,monospace;min-height:25px}.status.bad{color:var(--red)}.detail{color:var(--mut);font-size:13px}.receipt{background:#0c0b17;border:1px solid var(--line);padding:12px;border-radius:7px}
+footer{border-top:1px solid var(--line);font-size:12px;color:var(--mut)}@media(max-width:760px){.cols{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}header,main,footer{padding:16px}.panel{padding:15px}}
+</style></head><body>
+<header><div class="eyebrow">FrameCore · independent public executable</div>
+<h1>Reversible Workbench</h1>
+<p class="intro">Compose classical three-bit involution words. Execute them forward and backward, follow an exact compute–copy–uncompute protocol, and compare convergent designations against distinguishable operation histories.</p>
+<nav><a href="../IPI-Tafoli-Deno/">Reversible Witness</a><a href="../IPI-Holo-Toffoli-Map/">Holo-Toffoli Map</a><a href="../IPI-Reversible-Lab/">Demo index</a></nav>
+<div class="notice"><strong>Public companion, not the Rust-backed research workbench.</strong> All gates on this page execute locally in the browser. Native Leech addressing, HaraCode glyphs, QASM adders, and timeline custody are deliberately excluded; those functions require the separately operated FrameCore API and its evidence receipts.</div></header>
+<main><section class="panel"><h2>Programme editor</h2><div class="cols">
+<div><label for="preset">Programme</label><select id="preset"><option value="half">Half adder</option><option value="ccf">Toffoli CC_F</option><option value="majority">Majority</option><option value="parity">Parity</option><option value="fredkin">Controlled swap</option><option value="word">Composed reversible word</option><option value="identity">Identity</option></select><label>Input register X (bit 0 is the least significant bit)</label><div class="row" id="bit-buttons"><button class="bit" data-bit="2">b2: 0</button><button class="bit" data-bit="1">b1: 0</button><button class="bit" data-bit="0">b0: 0</button></div><p class="detail">Input is retained throughout Bennett closure; the workspace W and output Y start at zero.</p></div>
+<div><label for="gates">Typed JSON gate word (X, CX, CCX, SWAP, FREDKIN)</label><textarea id="gates" spellcheck="false"></textarea><div class="row" style="margin-top:10px"><button id="run">Execute programme</button><button id="alternate" class="secondary">Compare two histories</button></div></div>
+</div><p id="status" class="status" role="status"></p></section>
+<div class="cols"><section>
+<div class="panel"><h2>Forward / inverse execution</h2><div class="stats" id="stats"></div><table><thead><tr><th>X in</th><th>f(X)</th><th>f⁻¹(f(X))</th><th>check</th></tr></thead><tbody id="truth"></tbody></table><h3>Word trace for selected input</h3><div id="trace" class="steps"></div></div>
+<div class="panel"><h2>STASIS versus FLUX</h2><p class="detail">A word followed by <span class="mono">CC_F·CC_F</span> has the same eight-state permutation as the original word, but a distinct operation transcript. Final-state identity does not imply identity of history.</p><p id="histories" class="mono"></p></div>
+</section><section>
+<div class="panel"><h2>Bennett closure</h2><p class="detail">Three 3-bit registers: source X, clean workspace W, and clean destination Y. Work is uncomputed rather than overwritten.</p><div id="bennett" class="steps"></div><div class="stats" id="bennett-stats"></div><p id="bennett-proof" class="status"></p><p class="detail">The circuit contains 3 bitwise copy gates to initialize W, n programme gates, 3 bitwise copy gates to Y, n inverse gates, and 3 bitwise uncopy gates. That is 2n+9 elementary gates under this accounting—not a physical-energy estimate.</p></div>
+<div class="panel"><h2>Provenance boundary</h2><p class="detail">A SHA-256 digest below binds this browser's public programme, input, and computed result. It is not a signed research receipt, HaraCode designation, or native FrameCore LEDGER entry.</p><div id="digest" class="mono receipt">—</div><p class="detail">No network or backend is needed for the execution. The private workbench's served designation, Leech channel, stamp, replay, and quantum-adder routes are not simulated here.</p></div>
+</section></div></main>
+<footer>Paul Phillips · FrameCore independent research · Public classical reversible arithmetic witness. All 8 inputs are exhaustively checked on each run; no claims about quantum hardware, Landauer dissipation, or cross-lattice homomorphisms follow from these browser computations.</footer>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const WORDS={
+half:[{gate:"CCX",c1:0,c2:1,target:2},{gate:"CX",control:0,target:1}],
+ccf:[{gate:"CCX",c1:0,c2:1,target:2}],
+majority:[{gate:"CX",control:2,target:1},{gate:"CX",control:2,target:0},{gate:"CCX",c1:0,c2:1,target:2}],
+parity:[{gate:"CX",control:0,target:2},{gate:"CX",control:1,target:2}],
+fredkin:[{gate:"FREDKIN",control:0,a:1,b:2}],
+word:[{gate:"X",target:2},{gate:"CX",control:2,target:0},{gate:"SWAP",a:0,b:1},{gate:"CCX",c1:0,c2:1,target:2}],
+identity:[]
+};
+let input=3, last=null;
+const bit=(x,k)=>(x>>k)&1;
+const binary=x=>[2,1,0].map(i=>bit(x,i)).join("");
+function gate(g,s){
+const t=String(g.gate||"").toUpperCase();let wires;
+if(t==="X")wires=[g.target];
+else if(t==="CX")wires=[g.control,g.target];
+else if(t==="CCX")wires=[g.c1,g.c2,g.target];
+else if(t==="SWAP")wires=[g.a,g.b];
+else if(t==="FREDKIN")wires=[g.control,g.a,g.b];
+else throw Error("Unknown primitive gate "+t);
+if(wires.some(x=>!Number.isInteger(x)||x<0||x>2)||new Set(wires).size!==wires.length)throw Error("Wires must be distinct integers 0, 1, 2");
+if(t==="X")return s^(1<<g.target);
+if(t==="CX")return bit(s,g.control)?s^(1<<g.target):s;
+if(t==="CCX")return bit(s,g.c1)&&bit(s,g.c2)?s^(1<<g.target):s;
+if(t==="FREDKIN"&&!bit(s,g.control))return s;
+return bit(s,g.a)===bit(s,g.b)?s:s^((1<<g.a)|(1<<g.b));
+}
+const apply=(seq,x)=>seq.reduce((s,g)=>gate(g,s),x);
+function stage(i,label,x,w,y){return '<div class="step"><span>'+i+'</span><span>'+label+'</span><b>'+binary(x)+' | '+binary(w)+' | '+binary(y)+'</b></div>';}
+async function digest(o){if(!crypto||!crypto.subtle)return "not available on this origin";const bytes=new TextEncoder().encode(JSON.stringify(o));const h=await crypto.subtle.digest("SHA-256",bytes);return Array.from(new Uint8Array(h)).map(x=>x.toString(16).padStart(2,"0")).join("");}
+function buttons(){document.querySelectorAll("#bit-buttons button").forEach(b=>{const k=+b.dataset.bit;b.textContent="b"+k+": "+bit(input,k);b.classList.toggle("on",!!bit(input,k));});}
+function selected(){const q=JSON.parse($("gates").value);if(!Array.isArray(q)||q.length>128)throw Error("Gate word must be a JSON array with at most 128 gates");return q;}
+async function evaluate(){
+try{
+const gates=selected(),inverse=gates.slice().reverse();
+const outputs=Array.from({length:8},(_,i)=>apply(gates,i));
+if(new Set(outputs).size!==8)throw Error("Programme not bijective");
+const recover=outputs.map(v=>apply(inverse,v)),valid=recover.every((v,i)=>v===i);
+const out=outputs[input], trace=[{name:"input",value:input}];let state=input;
+gates.forEach((g,j)=>{state=gate(g,state);trace.push({name:String(j+1)+": "+g.gate,value:state});});
+const alt=[...gates,{gate:"CCX",c1:0,c2:1,target:2},{gate:"CCX",c1:0,c2:1,target:2}];
+const altMatches=Array.from({length:8},(_,i)=>apply(alt,i)===outputs[i]).every(Boolean);
+$("stats").innerHTML=[["X (input)",binary(input)],["Y=f(X)",binary(out)],["recovered",binary(apply(inverse,out))],["word gates",gates.length],["moved states",outputs.filter((v,i)=>v!==i).length+"/8"],["inverse test",valid?"8/8":"FAIL"]].map(v=>'<div class="stat"><strong>'+v[1]+'</strong><span>'+v[0]+'</span></div>').join("");
+$("truth").innerHTML=outputs.map((v,i)=>'<tr><td>'+binary(i)+'</td><td>'+binary(v)+'</td><td>'+binary(recover[i])+'</td><td class="'+(recover[i]===i?"ok":"bad")+'">'+(recover[i]===i?"PASS":"FAIL")+'</td></tr>').join("");
+$("trace").innerHTML=trace.map((v,i)=>'<div class="step"><span>'+i+'</span><span>'+v.name+'</span><b>'+binary(v.value)+'</b></div>').join("");
+let x=input,w=0,y=0;const stages=[];
+stages.push(stage("0","initial / clean W,Y",x,w,y));
+w^=x;stages.push(stage("1","copy X to W (3 CNOT)",x,w,y));
+w=apply(gates,w);stages.push(stage("2","compute f on W",x,w,y));
+y^=w;stages.push(stage("3","copy result to Y",x,w,y));
+w=apply(inverse,w);stages.push(stage("4","inverse word on W",x,w,y));
+w^=x;stages.push(stage("5","uncopy X from W",x,w,y));
+const closure=x===input&&w===0&&y===out&&valid;
+$("bennett").innerHTML=stages.join("");
+$("bennett-stats").innerHTML=[["elementary gates",2*gates.length+9],["workspace at exit",binary(w)],["irreversible resets",0]].map(v=>'<div class="stat"><strong>'+v[1]+'</strong><span>'+v[0]+'</span></div>').join("");
+$("bennett-proof").textContent=closure?"PASS · X retained, W restored to 000, Y=f(X), all 8 inverse tests pass":"FAIL · closure invariant";
+$("bennett-proof").className=closure?"status":"status bad";
+$("histories").textContent="STASIS: "+(altMatches?"same permutation on all 8 inputs":"MISMATCH")+"\nFLUX A: "+gates.length+" gates\nFLUX B: "+alt.length+" gates\nCustody LEDGER: not emitted by this browser demo.";
+$("status").textContent=valid&&closure&&altMatches?"PASS · bijective · inverse · Bennett uncompute · history control":"FAIL · invariant";
+$("status").className=valid&&closure&&altMatches?"status":"status bad";
+last={gates,input,out,permutation:outputs,inverse_ok:valid,closure_ok:closure};
+$("digest").textContent="SHA-256: "+await digest(last);
+}catch(e){$("status").textContent="REFUSED: "+e.message;$("status").className="status bad";$("digest").textContent="No receipt for refused input";}
+}
+$("preset").addEventListener("change",()=>{$("gates").value=JSON.stringify(WORDS[$("preset").value],null,2);evaluate();});
+document.querySelectorAll("#bit-buttons button").forEach(b=>b.addEventListener("click",()=>{input^=1<<+b.dataset.bit;buttons();evaluate();}));
+$("run").addEventListener("click",evaluate);
+$("alternate").addEventListener("click",()=>{try{const gates=selected();gates.push({gate:"CCX",c1:0,c2:1,target:2},{gate:"CCX",c1:0,c2:1,target:2});$("gates").value=JSON.stringify(gates,null,2);evaluate();}catch(e){$("status").textContent="REFUSED: "+e.message;$("status").className="status bad";}});
+$("gates").value=JSON.stringify(WORDS.half,null,2);buttons();evaluate();
+</script></body></html>
